@@ -1,0 +1,38 @@
+Metagenomic samples,Cluster sample ID (Larvae/QC_output ),,Cluster sample ID,,,EXPERIMENT,TRANSFER,Inoculum,Replicate,Sampling day,pH,Acetic_acid_mg/L,Propionic_acid_mg/L,Butyric_acid_mg/L,Cumulative CH4 _mL,Cumulative_CH4 _mL/gVS,H2_%,CO2_%,O2_%,N2_%,CH4_%
+2,UNDR03_2_1.fastq.tar.gz    ,UNDR03_2_2.fastq.tar.gz,UNDR03_2,1st_1T_midA,136,1,1T,Midgut,A,30,"7,78","4169,61","283,48","140,39","0,61","1,36","0,25","44,05","0,00","50,97","4,73"
+3,UNDR03_3_1.fastq.tar.gz    ,UNDR03_3_2.fastq.tar.gz    ,UNDR03_3,1st_1T_midB,137,1,1T,Midgut,B,30,"7,27","4518,43","307,68","80,14","0,80","1,77","0,30","44,22","0,00","50,27","5,21"
+4,UNDR03_4_1.fastq.tar.gz    ,UNDR03_4_2.fastq.tar.gz    ,UNDR03_4,1st_1T_midC,138,1,1T,Midgut,C,30,"7,07","4857,67","365,90","110,54","0,18","0,41","0,64","49,82","0,00","48,51","1,03"
+5,UNDR03_5_1.fastq.tar.gz    ,UNDR03_5_2.fastq.tar.gz    ,UNDR03_5,1st_1T_hidA,139,1,1T,Hindgut,A,30,"9,08","4133,13","413,10","77,77","3,24","7,20","0,20","47,04","0,00","39,14","13,62"
+6,UNDR03_6_1.fastq.tar.gz    ,UNDR03_6_2.fastq.tar.gz    ,UNDR03_6,1st_1T_hidB,140,1,1T,Hindgut,B,30,"8,08","4116,09","379,55","74,02","3,99","8,85","0,00","47,55","0,00","37,30","15,15"
+7,UNDR03_7_1.fastq.tar.gz ,UNDR03_7_2.fastq.tar.gz ,UNDR03_7,1st_1T_hidC,141,1,1T,Hindgut,C,30,"8,04","4049,83","447,35","77,76","4,14","9,18","0,25","46,87","0,00","36,81","16,07"
+22,UNDR03_22_1.fastq.tar.gz   ,UNDR03_22_2.fastq.tar.gz,UNDR03_22,1st_3T_midA,148,1,3T,Midgut,A,30,"7,50","1877,49","254,84","92,35","1,96","4,34","0,00","37,11","0,83","49,57","12,50"
+23,UNDR03_23_1.fastq.tar.gz   ,UNDR03_23_2.fastq.tar.gz   ,UNDR03_23,1st_3T_midB,149,1,3T,Midgut,B,30,"7,80","1518,68","214,64","46,18","1,15","2,55","0,20","23,85","1,14","65,99","8,82"
+24,UNDR03_24_1.fastq.tar.gz   ,UNDR03_24_2.fastq.tar.gz   ,UNDR03_24,1st_3T_midC,150,1,3T,Midgut,C,30,"7,67","1516,87","208,97","55,52","1,06","2,36","0,19","23,45","1,42","66,09","8,84"
+25,UNDR03_25_1.fastq.tar.gz   ,UNDR03_25_2.fastq.tar.gz   ,UNDR03_25,1st_3T_hidA,151,1,3T,Hindgut,A,30,"7,41","2189,91","242,26","96,17","2,09","4,65","0,19","37,92","0,89","49,88","11,12"
+26,UNDR03_26_1.fastq.tar.gz   ,UNDR03_26_2.fastq.tar.gz   ,UNDR03_26,1st_3T_hidB,152,1,3T,Hindgut,B,30,"7,50","1678,52","214,16","57,12","1,21","2,68","0,18","25,04","0,83","65,08","8,87"
+27,UNDR03_27_1.fastq.tar.gz   ,UNDR03_27_2.fastq.tar.gz,UNDR03_27,1st_3T_hidC,153,1,3T,Hindgut,C,30,"7,41","1897,55","245,02","61,75","1,29","2,86","0,38","32,03","0,85","59,30","7,43"
+74,UNDR03_74_1.fastq.tar.gz ,UNDR03_74_2.fastq.tar.gz ,UNDR03_74,2nd_1T_midA,158,2,1T,Midgut,A,30,"7,69","768,36","0,00","0,00","43,79","71,58","0,00","36,20","0,88","21,04","41,88"
+75,UNDR03_75_1.fastq.tar.gz ,UNDR03_75_2.fastq.tar.gz ,UNDR03_75,2nd_1T_midB,159,2,1T,Midgut,B,30,"7,93","321,00","0,00","6,12","50,85","75,84","0,00","26,66","1,36","22,01","49,97"
+76,UNDR03_76_1.fastq.tar.gz ,UNDR03_76_2.fastq.tar.gz ,UNDR03_76,2nd_1T_midC,160,2,1T,Midgut,C,30,"7,64","815,73","10,80","0,00","40,67","68,24","0,00","35,26","1,26","22,39","41,09"
+78,UNDR03_78_1.fastq.tar.gz ,UNDR03_78_2.fastq.tar.gz ,UNDR03_78,2nd_1T_hidA,161,2,1T,Hindgut,A,30,"7,76","258,78","0,00","0,00","51,39","91,57","0,00","31,74","1,30","19,36","47,60"
+79,UNDR03_79_1.fastq.tar.gz ,UNDR03_79_2.fastq.tar.gz ,UNDR03_79,2nd_1T_hidB,162,2,1T,Hindgut,B,30,"7,89","470,55","0,00","0,00","48,48","86,09","0,00","32,24","0,91","17,65","49,20"
+80,UNDR03_80_1.fastq.tar.gz ,UNDR03_80_2.fastq.tar.gz ,UNDR03_80,2nd_1T_hidC,163,2,1T,Hindgut,C,30,"7,63","659,67","3,66","0,00","54,24","89,37","0,00","34,91","1,01","17,39","46,69"
+102,UNDR03_102_1.fastq.tar.gz  ,UNDR03_102_2.fastq.tar.gz  ,UNDR03_102,2nd_2T_midA,164,2,2T,Midgut,A,30,"7,25","952,92","7,11","0,00","51,92","108,52","0,00","42,51","0,71","13,50","43,28"
+106,UNDR01_106_1.fastq.tar.gz,UNDR01_106_2.fastq.tar.gz    ,UNDR01_106,2nd_2T_hidA,167,2,2T,Hindgut,A,30,"7,43","1434,51","0,00","0,00","22,47","46,99","0,00","34,02","0,82","26,68","38,48"
+117,UNDR03_117_1.fastq.tar.gz  ,UNDR03_117_2.fastq.tar.gz  ,UNDR03_117,2nd_3T_midA,170,2,3T,Midgut,A,30,"7,75","166,56","0,00","0,00","31,80","60,14","0,00","25,68","0,00","29,39","44,92"
+118,UNDR03_118_1.fastq.tar.gz  ,UNDR03_118_2.fastq.tar.gz  ,UNDR03_118,2nd_3T_midB,171,2,3T,Midgut,B,30,"7,67","135,81","0,00","0,00","39,66","73,04","0,00","27,17","0,00","25,11","47,71"
+119,UNDR03_119_1.fastq.tar.gz  ,UNDR03_119_2.fastq.tar.gz  ,UNDR03_119,2nd_3T_midC,172,2,3T,Midgut,C,30,"7,75","115,83","0,00","0,00","33,42","62,87","0,00","25,55","0,00","29,04","45,40"
+121,UNDR03_121_1.fastq.tar.gz  ,UNDR03_121_2.fastq.tar.gz  ,UNDR03_121,2nd_3T_hidA,173,2,3T,Hindgut,A,30,"7,58","694,02","0,00","0,00","55,26","97,27","0,00","32,84","0,71","16,42","50,03"
+122,UNDR03_122_1.fastq.tar.gz  ,UNDR03_122_2.fastq.tar.gz,UNDR03_122,2nd_3T_hidB,174,2,3T,Hindgut,B,30,"7,58","598,47","0,00","0,00","48,13","82,87","0,00","29,75","0,00","18,35","51,91"
+123,UNDR03_123_1.fastq.tar.gz  ,UNDR03_123_2.fastq.tar.gz  ,UNDR03_123,2nd_3T_hidC,175,2,3T,Hindgut,C,30,"7,58","225,51","0,00","0,00","52,90","91,25","0,00","28,39","0,00","18,26","53,35"
+1MAa,UNDR03_1MAa_1.fastq.tar.gz ,UNDR03_1MAa_2.fastq.tar.gz ,UNDR03_1MAa,1st_inoc_mibA,200,1,Inoculum,Midgut,A,,,,,,,,,,,,
+1MBa,UNDR01_1MBa_1.fastq.tar.gz   ,UNDR01_1MBa_2.fastq.tar.gz   ,UNDR01_1MBa,1st_inoc_mibB,201,1,Inoculum,Midgut,B,,,,,,,,,,,,
+1MCa,UNDR03_1MCa_1.fastq.tar.gz ,UNDR03_1MCa_2.fastq.tar.gz ,UNDR03_1MCa,1st_inoc_mibC,202,1,Inoculum,Midgut,C,,,,,,,,,,,,
+1HAb,UNDR03_1HAb_1.fastq.tar.gz ,UNDR03_1HAb_2.fastq.tar.gz ,UNDR03_1HAb,1st_inoc_hidA_b,208,1,Inoculum,Hindgut,A,,,,,,,,,,,,
+1HBb,UNDR03_1HBb_1.fastq.tar.gz ,UNDR03_1HBb_2.fastq.tar.gz ,UNDR03_1HBb,1st_inoc_hibB_b,209,1,Inoculum,Hindgut,B,,,,,,,,,,,,
+1HCb,UNDR01_1HCb_1.fastq.tar.gz   ,UNDR01_1HCb_2.fastq.tar.gz   ,UNDR01_1HCb,1st_inoc_hibC_b,210,1,Inoculum,Hindgut,C,,,,,,,,,,,,
+2MAa,UNDR03_2MAa_1.fastq.tar.gz,UNDR03_2MAa_2.fastq.tar.gz,UNDR03_2MAa,2nd_inoc_midA,206,2,Inoculum,Midgut,A,,,,,,,,,,,,
+2MBb,UNDR03_2MBb_1.fastq.tar.gz ,UNDR03_2MBb_2.fastq.tar.gz ,UNDR03_2MBb,2nd_inoc_midB,211,2,Inoculum,Midgut,B,,,,,,,,,,,,
+2MCb,UNDR01_2MCb_1.fastq.tar.gz ,UNDR01_2MCb_2.fastq.tar.gz ,UNDR01_2MCb,2nd_inoc_midC,212,2,Inoculum,Midgut,C,,,,,,,,,,,,
+2HBb,UNDR03_2HBb_1.fastq.tar.gz ,UNDR03_2HBb_2.fastq.tar.gz ,UNDR03_2HBb,2nd_inoc_hidB,213,2,Inoculum,Hindgut,B,,,,,,,,,,,,
+2HCb,UNDR01_2HCb_1.fastq.tar.gz,UNDR01_2HCb_2.fastq.tar.gz,UNDR01_2HCb,2nd_inoc_hidC,214,2,Inoculum,Hindgut,C,,,,,,,,,,,,
