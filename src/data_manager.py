@@ -9,13 +9,13 @@ class DataManager:
         genomic_file_path: Path,
         metadata_file_path: Path,
         target_column: str,
-        genomic_file_index: str,
+        metadata_file_index: str,
     ):
         self.genomic_file_path: Path | str = genomic_file_path
         self.metadata_file_path: Path | str = metadata_file_path
         self.merged_df: DataFrame | None = None
         self.target_column: str = target_column
-        self.genomic_file_index = genomic_file_index
+        self.metadata_file_index = metadata_file_index
 
     def merge_datasets(self) -> None:
         """
@@ -31,10 +31,12 @@ class DataManager:
 
         genomic_df = pd.read_csv(self.genomic_file_path, index_col=0).T
         metadata_df = pd.read_csv(
-            self.metadata_file_path, index_col=self.genomic_file_index
+            self.metadata_file_path, index_col=self.metadata_file_index
         )[self.target_column]
 
-        merged_df = pd.merge(genomic_df, metadata_df, right_index=True, left_index=True)
+        merged_df = pd.merge(
+            genomic_df, metadata_df, how="inner", right_index=True, left_index=True
+        )
 
         self.merged_df = merged_df
 

@@ -1,6 +1,6 @@
 from sklearn.pipeline import Pipeline
-from optuna.trial import Trial
-from pipeline_components.selectors import BaseSelectorStrategy, ElasticNetSelector
+from optuna.trial import FixedTrial, Trial
+from src.pipeline_components.selectors import BaseSelectorStrategy, ElasticNetSelector
 from src.pipeline_components.models import (
     BaseModelStrategy,
     RandomForestStrategy,
@@ -23,7 +23,9 @@ class PipelineFactory:
             "ElasticNetSelector": ElasticNetSelector()
         }
 
-    def build_pipeline(self, trial: Trial, target_model_name: str) -> Pipeline:
+    def build_pipeline(
+        self, trial: Trial | FixedTrial, target_model_name: str
+    ) -> Pipeline:
         # ==== Optuna selects the best scalers and selector from registry ==== #
         scalers_list = list(self.scaler_registry.keys())
         selectors_list = list(self.selector_registry.keys())
