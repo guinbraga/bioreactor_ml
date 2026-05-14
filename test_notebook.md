@@ -21,21 +21,27 @@ dm = DataManager(
 )
 dm.merge_datasets()
 
-from src.evaluator import ExperimentEvaluator
+from src.experiment_evaluator import ExperimentEvaluator
 from sklearn.model_selection import LeaveOneOut
+from optuna import logging
+logging.set_verbosity(logging.WARNING)
 X, y = dm.get_X_y()
-exp_evaluator = ExperimentEvaluator("RandomForest", LeaveOneOut())
+exp_evaluator = ExperimentEvaluator("RandomForest", LeaveOneOut(), "../04_bioreactor_ml_project/results/")
 exp_evaluator.evaluate(X, y)
 ```
 
 ```python
-from sklearn.model_selection import LeaveOneOut
+X.iloc[1].name
+```
 
-loo = LeaveOneOut()
-split = loo.split(X, y)
+```python
+rows_list = []
+for i in range(5):
+    rows_list.append({'A': i, 'B': i * 2})
 
-for i, (train_index, test_index) in enumerate(split):
-    print(X.iloc[train_index])
+# Final concatenation
+df = pd.concat([df, pd.DataFrame(rows_list)], ignore_index=True)
+df
 ```
 
 

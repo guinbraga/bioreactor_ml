@@ -1,8 +1,10 @@
 from typing import Protocol
 from optuna import Trial
 from optuna.trial import FixedTrial
+from sklearn.base import TransformerMixin
 from sklearn.feature_selection import SelectFromModel
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import FunctionTransformer
 
 
 # ==== Base Selector Strategy ====
@@ -24,6 +26,7 @@ class ElasticNetSelector:
             solver="saga",
             C=selector_C,
             l1_ratio=selector_l1_ratio,
+            tol=1e-3,
             random_state=47,
             max_iter=2000,
         )
@@ -33,3 +36,8 @@ class ElasticNetSelector:
         )
 
         return feature_selector
+
+
+class PassthroughSelector:
+    def create_selector(self, trial: Trial | FixedTrial) -> TransformerMixin:
+        return FunctionTransformer(func=None)
