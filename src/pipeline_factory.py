@@ -23,7 +23,7 @@ class PipelineFactory:
     def __init__(self):
         self.model_registry: dict[str, BaseModelStrategy] = {
             "Random Forest": RandomForestStrategy(),
-            "L2 Logistic Regression": L1LogisticRegressionStrategy(),
+            "L1 Logistic Regression": L1LogisticRegressionStrategy(),
             "Elastic Net": ElasticNetStrategy(),
         }
 
