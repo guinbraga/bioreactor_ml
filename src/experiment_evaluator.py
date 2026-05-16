@@ -61,7 +61,7 @@ class ExperimentEvaluator:
                     "Split": split,
                     "Test Sample": test_sample,
                     "True Class": y_true,
-                    "Predicted Class": predictions[0].tolist(),
+                    "Predicted Class": predictions[0],
                     "Predicted Probabilities": predictions_proba[0].tolist(),
                     "Log Loss Score": log_loss_score,
                     "Best Pipeline Params": str(best_params_dict),

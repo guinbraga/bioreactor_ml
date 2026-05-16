@@ -1,7 +1,7 @@
 from sklearn.pipeline import Pipeline
 from optuna.trial import FixedTrial, Trial
 from pipeline_components.models.elastic_net import ElasticNetStrategy
-from pipeline_components.models.l2_logreg import L2LogisticRegressionStrategy
+from pipeline_components.models.l1_logreg import L1LogisticRegressionStrategy
 from pipeline_components.selectors import (
     BaseSelectorStrategy,
     ElasticNetSelector,
@@ -23,7 +23,7 @@ class PipelineFactory:
     def __init__(self):
         self.model_registry: dict[str, BaseModelStrategy] = {
             "Random Forest": RandomForestStrategy(),
-            "L2 Logistic Regression": L2LogisticRegressionStrategy(),
+            "L2 Logistic Regression": L1LogisticRegressionStrategy(),
             "Elastic Net": ElasticNetStrategy(),
         }
 

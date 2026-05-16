@@ -84,13 +84,13 @@ class PipelineOptimizer:
             direction="maximize"
         )  # might need to change direction depending on cv evaluation metric
         objective = Objective(
-            X_train,
-            y_train,
-            model_name,
-            selected_scalers,
-            selected_selectors,
-            cv,
-            scoring,
+            X_train=X_train,
+            y_train=y_train,
+            model_name=model_name,
+            selected_scalers=selected_scalers,
+            selected_selectors=selected_selectors,
+            cv=cv,
+            scoring=scoring,
         )
         optuna.logging.set_verbosity(optuna.logging.WARNING)  # to not print each trial
         warnings.simplefilter("ignore", category=ConvergenceWarning)
