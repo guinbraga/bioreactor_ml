@@ -1,34 +1,34 @@
-import pandas as pd
-import os
 from pandas import DataFrame, Series
 import numpy as np
 from sklearn.model_selection import LeaveOneOut
 from sklearn.metrics import log_loss
 from pipeline_optimizer import PipelineOptimizer
+from results_manager import ResultsManager
 
 
 class ExperimentEvaluator:
     def __init__(
         self,
         model_name: str,
-        results_directory: str,
+        results_dir: str,
         selected_scalers: list[str],
         selected_selectors: list[str],
         cv: int | object = LeaveOneOut(),
     ) -> None:
         self.model_name = model_name
         self.cv = cv
-        self.results_directory = results_directory
+        self.results_dir = results_dir
         self.selected_scalers = selected_scalers
         self.selected_selectors = selected_selectors
-        os.makedirs(self.results_directory, exist_ok=True)
 
     def evaluate(self, X: DataFrame, y: Series):
         n_samples = len(X)
         classes = np.unique(y)
-        rows_result = []
 
         loo = LeaveOneOut()
+        results_manager = ResultsManager(
+            model_name=self.model_name, results_dir=self.results_dir
+        )
         splits = loo.split(X, y)
         for i, (train_index, test_index) in enumerate(splits):
             X_train = X.iloc[train_index]
@@ -56,7 +56,7 @@ class ExperimentEvaluator:
             log_loss_score = log_loss(y_test, predictions_proba, labels=classes)
             best_params_dict = study.best_params
 
-            rows_result.append(
+            results_manager.record_split_metrics(
                 {
                     "Split": split,
                     "Test Sample": test_sample,
@@ -68,5 +68,10 @@ class ExperimentEvaluator:
                 }
             )
 
-        result_df = pd.DataFrame(rows_result)
-        result_df.to_csv(self.results_directory + "/" + self.model_name + ".csv")
+            results_manager.generate_waterfall_plot(
+                pipeline=pipeline, X_train=X_train, X_test=X_test, test_index=test_index
+            )
+
+            # ========= SHAP Waterfall Plot ============== #
+
+        results_manager.save_final_csv()

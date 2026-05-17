@@ -50,7 +50,7 @@ for model in selected_models:
     selected_scalers = questionary.checkbox(
         f"[{model}] Select feature scaling techniques to evaluate:",
         choices=available_components["scalers"],
-        validate=lambda x: len(x) > 0
+        validate=lambda x: len(x) > 0,
     ).ask()
 
     selected_selectors = questionary.checkbox(
@@ -64,17 +64,21 @@ for model in selected_models:
     }
 
 
-results_directory = questionary.path("Which directory to save results?").ask()
+results_dir = questionary.path("Which directory to save results?").ask()
+
 
 def on_begin(model_name: str):
     console.print(f"[green]Starting Evaluation for {model_name}...[/green]")
+
+
 def on_complete(model_name: str):
     console.print(f"[green]Finished Evaluation for {model_name}![/green]")
+
 
 evaluate_experiment(
     data_manager=data_manager,
     selected_models=models_to_evaluate,
-    results_directory=results_directory,
+    results_dir=results_dir,
     on_begin=on_begin,
-    on_complete=on_complete
+    on_complete=on_complete,
 )

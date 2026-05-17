@@ -44,7 +44,7 @@ def setup_data(
 def evaluate_experiment(
     data_manager: DataManager,
     selected_models: dict[str, dict["str", list[str]]],
-    results_directory: str,
+    results_dir: str,
     on_complete: Callable | None = None,
     on_begin: Callable | None = None,
 ):
@@ -57,7 +57,7 @@ def evaluate_experiment(
             model_name=model_name,
             selected_scalers=model_config["selected_scalers"],
             selected_selectors=model_config["selected_selectors"],
-            results_directory=results_directory,
+            results_dir=results_dir,
         )
         evaluator.evaluate(X, y)
         if on_complete:
