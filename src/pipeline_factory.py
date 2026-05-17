@@ -13,8 +13,10 @@ from pipeline_components.models import (
 )
 from pipeline_components.scalers import (
     BaseScalerStrategy,
+    BinarizerScaler,
     CLRTransformer,
     PassthroughScaler,
+    RelativeAbundanceScaler,
 )
 from sklearn.pipeline import make_pipeline
 
@@ -30,6 +32,8 @@ class PipelineFactory:
         self.scaler_registry: dict[str, BaseScalerStrategy] = {
             "No Feature Scaling": PassthroughScaler(),
             "CLR Transformer": CLRTransformer(),
+            "Presence/Abscence Transformer" : BinarizerScaler(),
+            "Relative Abundance": RelativeAbundanceScaler(),
         }
 
         self.selector_registry: dict[str, BaseSelectorStrategy] = {

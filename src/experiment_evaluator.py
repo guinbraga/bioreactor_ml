@@ -27,7 +27,8 @@ class ExperimentEvaluator:
 
         loo = LeaveOneOut()
         results_manager = ResultsManager(
-            model_name=self.model_name, results_dir=self.results_dir
+            model_name=self.model_name,
+            results_dir=f"{self.results_dir}/{self.model_name}",
         )
         splits = loo.split(X, y)
         for i, (train_index, test_index) in enumerate(splits):
@@ -68,10 +69,11 @@ class ExperimentEvaluator:
                 }
             )
 
-            results_manager.generate_waterfall_plot(
-                pipeline=pipeline, X_train=X_train, X_test=X_test, test_index=test_index
+            results_manager.process_split_data(
+                pipeline=pipeline, X_train=X_train, X_test=X_test
             )
 
-            # ========= SHAP Waterfall Plot ============== #
-
+        results_manager.generate_bee_swarm_plot()
+        results_manager.save_shap_objects()
+        results_manager.save_shap_dataframes()
         results_manager.save_final_csv()

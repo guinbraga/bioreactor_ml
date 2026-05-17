@@ -1,7 +1,8 @@
 import numpy as np
 from pandas import DataFrame
 from sklearn.base import TransformerMixin
-from sklearn.preprocessing import FunctionTransformer
+from sklearn.pipeline import make_pipeline, Pipeline
+from sklearn.preprocessing import Binarizer, FunctionTransformer, Normalizer
 from skbio.stats.composition import multi_replace
 from optuna.trial import FixedTrial, Trial
 from typing import Protocol
@@ -29,9 +30,27 @@ def clr_transform(X: np.ndarray | DataFrame) -> np.ndarray | DataFrame:
 
 
 class CLRTransformer:
-    def create_scaler(self, trial: Trial | FixedTrial):
+    def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
         return FunctionTransformer(clr_transform)
+
 
 class PassthroughScaler:
     def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
         return FunctionTransformer(func=None)
+
+
+class BinarizerScaler:
+    def create_scaler(self, trial: Trial | FixedTrial) -> Pipeline:
+        scaler_threshold = trial.suggest_float(
+            "scaler_threshold", 0.00001, 0.005, log=True
+        )
+        normalizer = Normalizer(norm="l1")
+        binarizer = Binarizer(threshold=scaler_threshold)
+        scaler = make_pipeline(normalizer, binarizer)
+
+        return scaler
+
+
+class RelativeAbundanceScaler:
+    def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
+        return Normalizer(norm="l1")
