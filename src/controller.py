@@ -1,8 +1,15 @@
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable, TypedDict
 from data_manager import DataManager
 from experiment_evaluator import ExperimentEvaluator
 from pipeline_factory import PipelineFactory
+
+
+class ModelConfig(TypedDict):
+    selected_scaler_sequences: list[tuple[str, ...]]
+    selected_selectors: list[str]
+    cv: str
+    groups: Any
 
 
 def fetch_metadata_columns(metadata_file_path: Path | str) -> list:
@@ -14,10 +21,12 @@ def fetch_pipeline_components() -> dict[str, list[str]]:
     available_models = pipeline_factory.get_available_models()
     available_scalers = pipeline_factory.get_available_scalers()
     available_selectors = pipeline_factory.get_available_selectors()
+    available_cross_validators = pipeline_factory.get_available_cv()
     payload = {
         "models": available_models,
         "scalers": available_scalers,
         "selectors": available_selectors,
+        "cross_validators": available_cross_validators,
     }
     return payload
 
@@ -43,20 +52,26 @@ def setup_data(
 
 def evaluate_experiment(
     data_manager: DataManager,
-    selected_models: dict[str, dict["str", list[str]]],
+    selected_models: dict[str, ModelConfig],
     results_dir: str,
     on_complete: Callable | None = None,
     on_begin: Callable | None = None,
 ):
     X, y = data_manager.get_X_y()
+    pipeline_factory = PipelineFactory()
 
     for model_name, model_config in selected_models.items():
         if on_begin:
             on_begin(model_name)
+        cv_registry = pipeline_factory.cv_registry
+        cv_obj = cv_registry[model_config["cv"]]
+        groups = data_manager.get_groups(model_config["groups"])
         evaluator = ExperimentEvaluator(
             model_name=model_name,
-            selected_scalers=model_config["selected_scalers"],
+            selected_scaler_sequences=model_config["selected_scaler_sequences"],
             selected_selectors=model_config["selected_selectors"],
+            cv=cv_obj,
+            groups=groups,
             results_dir=results_dir,
         )
         evaluator.evaluate(X, y)

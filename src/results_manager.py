@@ -12,11 +12,12 @@ from sklearn.utils.parallel import joblib
 
 
 class ResultsManager:
-    def __init__(self, model_name: str, results_dir: str) -> None:
+    def __init__(self, model_name: str, results_dir: str, target_col: str) -> None:
         self.rows_result: list[dict] = []
         self.rows_shap: dict = {}
         self.model_name: str = model_name
         self.results_dir: str = results_dir
+        self.target_col: str = target_col
         self.plot_dir: str = f"{self.results_dir}/plots"
         self.all_shap_explanations: list[Explanation] = []
         os.makedirs(self.plot_dir, exist_ok=True)
@@ -88,7 +89,7 @@ class ResultsManager:
         )
 
         shap.plots.beeswarm(global_explanation, show=False, max_display=15)
-        plt.title(f"Global Beeswarm plot (LOOCV) for {self.model_name}")
+        plt.title(f"{self.model_name} Global Beeswarm plot (LOOCV) for predicting {self.target_col}")
         plt.savefig(
             f"{self.results_dir}/plots/{self.model_name}_beeswarm.png",
             dpi=300,

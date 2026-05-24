@@ -1,6 +1,6 @@
 from pandas import DataFrame, Series
 import numpy as np
-from sklearn.model_selection import LeaveOneOut
+from sklearn.model_selection import BaseCrossValidator, LeaveOneOut, LeaveOneGroupOut
 from sklearn.metrics import log_loss
 from pipeline_optimizer import PipelineOptimizer
 from results_manager import ResultsManager
@@ -11,33 +11,45 @@ class ExperimentEvaluator:
         self,
         model_name: str,
         results_dir: str,
-        selected_scalers: list[str],
+        selected_scaler_sequences: list[tuple[str, ...]],
         selected_selectors: list[str],
-        cv: int | object = LeaveOneOut(),
+        cv: BaseCrossValidator = LeaveOneOut(),
+        groups: Series | None = None,
     ) -> None:
         self.model_name = model_name
         self.cv = cv
         self.results_dir = results_dir
-        self.selected_scalers = selected_scalers
+        self.selected_scaler_sequences = selected_scaler_sequences
         self.selected_selectors = selected_selectors
+        self.groups = groups
+        self.cv_registry: dict[str, BaseCrossValidator] = {
+            "Leave One Out": LeaveOneOut(),
+            "Leave One Group Out": LeaveOneGroupOut(),
+        }
 
     def evaluate(self, X: DataFrame, y: Series):
-        n_samples = len(X)
-        classes = np.unique(y)
 
-        loo = LeaveOneOut()
         results_manager = ResultsManager(
             model_name=self.model_name,
             results_dir=f"{self.results_dir}/{self.model_name}",
+            target_col=str(y.name)
         )
-        splits = loo.split(X, y)
+        cv = self.cv
+        splits = cv.split(X, y, groups=self.groups)
         for i, (train_index, test_index) in enumerate(splits):
             X_train = X.iloc[train_index]
             y_train = y.iloc[train_index]
             X_test = X.iloc[test_index]
             y_test = y.iloc[test_index]
+            groups_train = None
 
-            print(f"Starting pipeline for split {i + 1} out of {n_samples}")
+            if self.groups is not None and not isinstance(self.groups, Series):
+                raise TypeError("Groups is not Series or None. Perhaps you passed a DataFrame?")
+
+            if type(self.groups) is Series:
+                groups_train = self.groups.iloc[train_index]
+
+            print(f"Starting pipeline for split {i + 1} out of {cv.get_n_splits(X, y, self.groups)}")
 
             pipeline_optimizer = PipelineOptimizer()
             pipeline, study = pipeline_optimizer.optimize_pipeline(
@@ -45,7 +57,8 @@ class ExperimentEvaluator:
                 y_train=y_train,
                 model_name=self.model_name,
                 cv=self.cv,
-                selected_scalers=self.selected_scalers,
+                groups=groups_train,
+                selected_scaler_sequences=self.selected_scaler_sequences,
                 selected_selectors=self.selected_selectors,
             )
 
@@ -54,6 +67,7 @@ class ExperimentEvaluator:
             y_true = y_test.iloc[0]
             predictions = pipeline.predict(X_test)
             predictions_proba = pipeline.predict_proba(X_test)
+            classes = np.unique(y)
             log_loss_score = log_loss(y_test, predictions_proba, labels=classes)
             best_params_dict = study.best_params
 
@@ -77,3 +91,7 @@ class ExperimentEvaluator:
         results_manager.save_shap_objects()
         results_manager.save_shap_dataframes()
         results_manager.save_final_csv()
+
+    def get_available_cv(self) -> list[str]:
+        available_cv = [cv for cv in self.cv_registry.keys()]
+        return available_cv

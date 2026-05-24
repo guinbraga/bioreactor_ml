@@ -21,6 +21,7 @@ available_columns.remove(target_column)
 metadata_file_index = questionary.select(
     "Select index column from metadata file:", choices=available_columns
 ).ask()
+available_columns.remove(metadata_file_index)
 
 console.print("[yellow]Validating and merging datasets...[/yellow]")
 
@@ -41,17 +42,43 @@ console.print(f"Excluded Samples: {merge_results['excluded_samples']}")
 
 available_components = fetch_pipeline_components()
 
+groups = None
+splitter = questionary.select(
+    "What splitting method to use for train-validation-test?",
+    choices=available_components["cross_validators"],
+).ask()
+if splitter == "Leave One Group Out":
+    groups = questionary.select(
+        "What column represents the groups?",
+        choices=available_columns
+    ).ask()
+
 selected_models = questionary.checkbox(
-    "Select models to evaluate:", choices=available_components["models"]
+    "Select models to evaluate:", choices=available_components["models"],
+    validate=lambda x: len(x) > 0,
 ).ask()
 
 models_to_evaluate = {}
 for model in selected_models:
-    selected_scalers = questionary.checkbox(
-        f"[{model}] Select feature scaling techniques to evaluate:",
-        choices=available_components["scalers"],
-        validate=lambda x: len(x) > 0,
-    ).ask()
+    # First we choose scaling sequences to evaluate
+    adding_sequences = True
+    selected_scaler_sequences = []
+    done_msg = "[Done] -- finish this sequence --"
+    scaling_choices = available_components["scalers"] + [done_msg]
+    while adding_sequences:
+        scaler_sequence = []
+        while True:
+            step = 1
+            scaling_step = questionary.select(
+                f"[{model}] Select step {step} of the scaling sequence: ",
+                choices=scaling_choices,
+            ).ask()
+            if scaling_step == done_msg or None:
+                break
+            scaler_sequence.append(scaling_step)
+            step += 1
+        selected_scaler_sequences.append(tuple(scaler_sequence))
+        adding_sequences = questionary.confirm("Add another sequence?").ask()
 
     selected_selectors = questionary.checkbox(
         f"[{model}] Select feature selection techniques to evaluate:",
@@ -59,8 +86,10 @@ for model in selected_models:
         validate=lambda x: len(x) > 0,
     ).ask()
     models_to_evaluate[model] = {
-        "selected_scalers": selected_scalers,
+        "selected_scaler_sequences": selected_scaler_sequences,
         "selected_selectors": selected_selectors,
+        "cv": splitter,
+        "groups": groups
     }
 
 

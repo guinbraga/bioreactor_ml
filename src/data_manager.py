@@ -77,3 +77,14 @@ class DataManager:
             )
 
         return (X, y)
+
+    def get_groups(self, group_column: str | None) -> Series | None:
+        if group_column is None:
+            return None
+        metadata_df = pd.read_csv(self.metadata_file_path)
+        groups = metadata_df[group_column]
+        if type(groups) is not Series:
+            raise TypeError(
+                "Groups is not a Series. Either group_column is not a metadata column or is a list of columns."
+            )
+        return groups

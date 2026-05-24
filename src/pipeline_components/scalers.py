@@ -2,14 +2,19 @@ import numpy as np
 from pandas import DataFrame
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import make_pipeline, Pipeline
-from sklearn.preprocessing import Binarizer, FunctionTransformer, Normalizer
+from sklearn.preprocessing import (
+    Binarizer,
+    FunctionTransformer,
+    Normalizer,
+    StandardScaler,
+)
 from skbio.stats.composition import multi_replace
 from optuna.trial import FixedTrial, Trial
 from typing import Protocol
 
 
 class BaseScalerStrategy(Protocol):
-    def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
+    def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin | Pipeline:
         return TransformerMixin()
 
 
@@ -54,3 +59,8 @@ class BinarizerScaler:
 class RelativeAbundanceScaler:
     def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
         return Normalizer(norm="l1")
+
+
+class Standardizer:
+    def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
+        return StandardScaler()

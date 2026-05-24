@@ -5,7 +5,7 @@ import numpy as np
 from optuna.study import Study
 from optuna.trial import Trial
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score, LeaveOneOut
+from sklearn.model_selection import BaseCrossValidator, cross_val_score, LeaveOneOut
 from sklearn.metrics import make_scorer, log_loss
 from pandas import DataFrame, Series
 from pipeline_factory import PipelineFactory
@@ -22,24 +22,29 @@ class Objective:
         X_train: DataFrame,
         y_train: DataFrame | Series,
         model_name: str,
-        selected_scalers: list[str],
+        selected_scaler_sequences: list[tuple[str, ...]],
         selected_selectors: list[str],
         scoring: int | str | object = None,
-        cv: int | object = LeaveOneOut(),
+        cv: BaseCrossValidator = LeaveOneOut(),
+        groups: Series | None = None,
     ) -> None:
         self.X_train = X_train
         self.y_train = y_train
         self.model_name = model_name
         self.selected_selectors = selected_selectors
-        self.selected_scalers = selected_scalers
+        self.selected_scaler_sequences = selected_scaler_sequences
         self.cv = cv
+        self.groups = groups
         self.scoring = scoring
         self.pipeline_factory = PipelineFactory()
 
-    # __call__ function is executed when the object is instanciated
+    # __call__ function is executed when the object is instantiated
     def __call__(self, trial: Trial) -> float:
         pipeline = self.pipeline_factory.build_pipeline(
-            trial, self.model_name, self.selected_scalers, self.selected_selectors
+            trial,
+            self.model_name,
+            self.selected_scaler_sequences,
+            self.selected_selectors,
         )
 
         classes = np.unique(
@@ -58,6 +63,7 @@ class Objective:
             self.X_train,
             self.y_train,
             cv=self.cv,
+            groups=self.groups,
             scoring=custom_scorer,
             n_jobs=-1,
         )
@@ -75,9 +81,10 @@ class PipelineOptimizer:
         X_train: DataFrame,
         y_train: DataFrame | Series,
         model_name: str,
-        cv: int | object,
-        selected_scalers: list[str],
+        cv: BaseCrossValidator,
+        selected_scaler_sequences: list[tuple[str, ...]],
         selected_selectors: list[str],
+        groups: Series | None = None,
         scoring: str | object = None,
     ) -> tuple[Pipeline, Study]:  # returns both pipeline and study for record purposes
         study = optuna.create_study(
@@ -87,9 +94,10 @@ class PipelineOptimizer:
             X_train=X_train,
             y_train=y_train,
             model_name=model_name,
-            selected_scalers=selected_scalers,
+            selected_scaler_sequences=selected_scaler_sequences,
             selected_selectors=selected_selectors,
             cv=cv,
+            groups=groups,
             scoring=scoring,
         )
         optuna.logging.set_verbosity(optuna.logging.WARNING)  # to not print each trial
@@ -102,7 +110,7 @@ class PipelineOptimizer:
         fixed_trial = optuna.trial.FixedTrial(best_params_dict)
 
         best_pipeline = PipelineFactory().build_pipeline(
-            fixed_trial, model_name, selected_scalers, selected_selectors
+            fixed_trial, model_name, selected_scaler_sequences, selected_selectors
         )
         best_pipeline.fit(X_train, y_train)
 
