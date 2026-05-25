@@ -51,7 +51,7 @@ class ResultsManager:
 
         shap.plots.waterfall(explanation, show=False, max_display=15)
         sample_id = X_test.index[0]
-        plt.title(f"{self.model_name} - Feature Importances for {sample_id} Prediction")
+        plt.title(f"{self.model_name} - Feature Importances for {sample_id} Prediction of {self.target_col}")
 
         plt.savefig(
             f"{self.results_dir}/plots/{self.model_name}_waterfall_{sample_id}.png",
@@ -89,7 +89,7 @@ class ResultsManager:
         )
 
         shap.plots.beeswarm(global_explanation, show=False, max_display=15)
-        plt.title(f"{self.model_name} Global Beeswarm plot (LOOCV) for predicting {self.target_col}")
+        plt.title(f"{self.model_name} Global Beeswarm plot for predicting {self.target_col}")
         plt.savefig(
             f"{self.results_dir}/plots/{self.model_name}_beeswarm.png",
             dpi=300,
