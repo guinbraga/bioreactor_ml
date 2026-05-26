@@ -3,6 +3,7 @@ from sklearn.pipeline import Pipeline
 from optuna.trial import FixedTrial, Trial
 from pipeline_components.models.elastic_net import ElasticNetStrategy
 from pipeline_components.models.l1_logreg import L1LogisticRegressionStrategy
+from pipeline_components.models.linear_svm import LinearSVMStrategy
 from pipeline_components.selectors import (
     BaseSelectorStrategy,
     ElasticNetSelector,
@@ -29,6 +30,7 @@ class PipelineFactory:
             "Random Forest": RandomForestStrategy(),
             "L1 Logistic Regression": L1LogisticRegressionStrategy(),
             "Elastic Net": ElasticNetStrategy(),
+            "SVM-linear": LinearSVMStrategy(),
         }
 
         self.scaler_registry: dict[str, BaseScalerStrategy] = {

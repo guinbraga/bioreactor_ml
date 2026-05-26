@@ -3,7 +3,7 @@ import shap
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg") # so that we don't have problems generationg plots while running processes on all cores
 import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
 from pandas import DataFrame
