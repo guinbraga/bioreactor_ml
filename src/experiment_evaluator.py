@@ -28,12 +28,12 @@ class ExperimentEvaluator:
         }
 
     def evaluate(self, X: DataFrame, y: Series):
-
         results_manager = ResultsManager(
             model_name=self.model_name,
             results_dir=f"{self.results_dir}/{self.model_name}",
-            target_col=str(y.name)
+            target_col=str(y.name),
         )
+
         cv = self.cv
         splits = cv.split(X, y, groups=self.groups)
         for i, (train_index, test_index) in enumerate(splits):
@@ -44,12 +44,16 @@ class ExperimentEvaluator:
             groups_train = None
 
             if self.groups is not None and not isinstance(self.groups, Series):
-                raise TypeError("Groups is not Series or None. Perhaps you passed a DataFrame?")
+                raise TypeError(
+                    "Groups is not Series or None. Perhaps you passed a DataFrame?"
+                )
 
             if type(self.groups) is Series:
                 groups_train = self.groups.iloc[train_index]
 
-            print(f"Starting pipeline for split {i + 1} out of {cv.get_n_splits(X, y, self.groups)}")
+            print(
+                f"Starting pipeline for split {i + 1} out of {cv.get_n_splits(X, y, self.groups)}"
+            )
 
             pipeline_optimizer = PipelineOptimizer()
             pipeline, study = pipeline_optimizer.optimize_pipeline(
@@ -91,6 +95,12 @@ class ExperimentEvaluator:
         results_manager.save_shap_objects()
         results_manager.save_shap_dataframes()
         results_manager.save_final_csv()
+        results_manager.record_experiment_setup(
+            self.selected_scaler_sequences,
+            self.selected_selectors,
+            self.cv,
+            self.groups,
+        )
 
     def get_available_cv(self) -> list[str]:
         available_cv = [cv for cv in self.cv_registry.keys()]

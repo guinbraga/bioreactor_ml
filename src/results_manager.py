@@ -1,9 +1,14 @@
 import os
 import shap
+import json
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use("Agg") # so that we don't have problems generationg plots while running processes on all cores
+from sklearn.model_selection import BaseCrossValidator
+
+matplotlib.use(
+    "Agg"
+)  # so that we don't have problems generationg plots while running processes on all cores
 import matplotlib.pyplot as plt
 from sklearn.pipeline import Pipeline
 from pandas import DataFrame
@@ -21,6 +26,25 @@ class ResultsManager:
         self.plot_dir: str = f"{self.results_dir}/plots"
         self.all_shap_explanations: list[Explanation] = []
         os.makedirs(self.plot_dir, exist_ok=True)
+
+    def record_experiment_setup(
+        self,
+        selected_scaler_sequences: list[tuple[str, ...]],
+        selected_selectors: list[str],
+        cv: BaseCrossValidator,
+        groups,
+    ) -> None:
+        experiment_setup = {
+            "Model": self.model_name,
+            "Target Column": self.target_col,
+            "Scaler Sequences Evaluated": selected_scaler_sequences,
+            "Feature Selection Techniques Evaluated": selected_selectors,
+            "Cross Validation Method": cv.__str__(),
+            "Groups": str(groups.name),
+        }
+
+        with open(f"{self.results_dir}/experiment_config.json", "w") as config_file:
+            json.dump(experiment_setup, config_file)
 
     def record_split_metrics(self, split_data: dict) -> None:
         self.rows_result.append(split_data)
@@ -51,7 +75,9 @@ class ResultsManager:
 
         shap.plots.waterfall(explanation, show=False, max_display=15)
         sample_id = X_test.index[0]
-        plt.title(f"{self.model_name} - Feature Importances for {sample_id} Prediction of {self.target_col}")
+        plt.title(
+            f"{self.model_name} - Feature Importances for {sample_id} Prediction of {self.target_col}"
+        )
 
         plt.savefig(
             f"{self.results_dir}/plots/{self.model_name}_waterfall_{sample_id}.png",
@@ -89,7 +115,9 @@ class ResultsManager:
         )
 
         shap.plots.beeswarm(global_explanation, show=False, max_display=15)
-        plt.title(f"{self.model_name} Global Beeswarm plot for predicting {self.target_col}")
+        plt.title(
+            f"{self.model_name} Global Beeswarm plot for predicting {self.target_col}"
+        )
         plt.savefig(
             f"{self.results_dir}/plots/{self.model_name}_beeswarm.png",
             dpi=300,

@@ -63,20 +63,28 @@ for model in selected_models:
     # First we choose scaling sequences to evaluate
     adding_sequences = True
     selected_scaler_sequences = []
+    erase_step_msg = "[Erase] -- erase last step --"
     done_msg = "[Done] -- finish this sequence --"
-    scaling_choices = available_components["scalers"] + [done_msg]
+    scaling_choices = available_components["scalers"] + [erase_step_msg, done_msg]
     while adding_sequences:
         scaler_sequence = []
+        step = 1
         while True:
-            step = 1
+            current_sequence_repr = " -> ".join(scaler_sequence)
+            console.print(f"[yellow]Current scaling sequence:[/yellow]")
+            console.print(current_sequence_repr)
             scaling_step = questionary.select(
-                f"[{model}] Select step {step} of the scaling sequence: ",
+                f"\n[{model}] Select step {step} of the scaling sequence: ",
                 choices=scaling_choices,
             ).ask()
             if scaling_step == done_msg or None:
                 break
-            scaler_sequence.append(scaling_step)
-            step += 1
+            if scaling_step == erase_step_msg:
+                scaler_sequence.pop()
+                step -= 1
+            else:
+                scaler_sequence.append(scaling_step)
+                step += 1
         selected_scaler_sequences.append(tuple(scaler_sequence))
         adding_sequences = questionary.confirm("Add another sequence?").ask()
 
