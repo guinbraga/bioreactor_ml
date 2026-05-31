@@ -88,7 +88,6 @@ class ResultsManager:
         )
 
         explainer = shap.Explainer(model=pipeline[-1], masker=X_train_df)
-        print(explainer)
         shap_values = explainer(X_test_df)
 
         # Shap values have different shapes depending on what function we pass them.
