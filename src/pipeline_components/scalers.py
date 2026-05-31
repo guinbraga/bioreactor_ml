@@ -36,12 +36,12 @@ def clr_transform(X: np.ndarray | DataFrame) -> np.ndarray | DataFrame:
 
 class CLRTransformer:
     def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
-        return FunctionTransformer(clr_transform)
+        return FunctionTransformer(clr_transform, feature_names_out='one-to-one')
 
 
 class PassthroughScaler:
     def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
-        return FunctionTransformer(func=None)
+        return FunctionTransformer(func=None, feature_names_out='one-to-one')
 
 
 class BinarizerScaler:

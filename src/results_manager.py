@@ -25,6 +25,8 @@ class ResultsManager:
         self.target_col: str = target_col
         self.plot_dir: str = f"{self.results_dir}/plots"
         self.all_shap_explanations: list[Explanation] = []
+        self.coeff_results = []
+
         os.makedirs(self.plot_dir, exist_ok=True)
 
     def record_experiment_setup(
@@ -34,13 +36,15 @@ class ResultsManager:
         cv: BaseCrossValidator,
         groups,
     ) -> None:
+        if groups:
+            groups = groups.name
         experiment_setup = {
             "Model": self.model_name,
             "Target Column": self.target_col,
             "Scaler Sequences Evaluated": selected_scaler_sequences,
             "Feature Selection Techniques Evaluated": selected_selectors,
             "Cross Validation Method": cv.__str__(),
-            "Groups": str(groups.name),
+            "Groups": str(groups),
         }
 
         with open(f"{self.results_dir}/experiment_config.json", "w") as config_file:
@@ -49,7 +53,21 @@ class ResultsManager:
     def record_split_metrics(self, split_data: dict) -> None:
         self.rows_result.append(split_data)
 
-    def process_split_data(
+    def record_split_coefs(self, pipeline: Pipeline, sample_id: str) -> None:
+        estimator = pipeline[-1]
+
+        if not hasattr(estimator, "coef_"):
+            return
+
+        feature_names = pipeline[:-1].get_feature_names_out()
+        coefficients = estimator.coef_[0]
+
+        coef_dict = {"Test Sample": sample_id}
+        coef_dict.update(dict(zip(feature_names, coefficients)))
+
+        self.coeff_results.append(coef_dict)
+
+    def generate_shap_waterfall(
         self, pipeline: Pipeline, X_train: DataFrame, X_test: DataFrame
     ) -> None:
         """
@@ -57,11 +75,23 @@ class ResultsManager:
         the waterfall plot for that test sample
         """
 
-        explainer = shap.Explainer(pipeline.predict_proba, X_train)
-        shap_values = explainer(X_test, max_evals=1500)
+        preprocessing = pipeline[:-1]
+        feature_names = preprocessing.get_feature_names_out()
+        X_transformed = preprocessing.transform(X_train)
+        X_test_transformed = preprocessing.transform(X_test)
+
+        X_train_df = pd.DataFrame(
+            X_transformed, columns=feature_names, index=X_train.index
+        )
+        X_test_df = pd.DataFrame(
+            X_test_transformed, columns=feature_names, index=X_test.index
+        )
+
+        explainer = shap.Explainer(model=pipeline[-1], masker=X_train_df)
+        print(explainer)
+        shap_values = explainer(X_test_df)
 
         # Shap values have different shapes depending on what function we pass them.
-        # Here, we expect to fall into the 3-dimensional case (sample, shap_values, class)
         if isinstance(shap_values, list):
             explanation = shap_values[1][0]
 
@@ -98,20 +128,26 @@ class ResultsManager:
                 [explanation.base_values for explanation in self.all_shap_explanations]
             )
         )
-        feature_names = self.all_shap_explanations[0].feature_names
-        merged_values = [
-            explanation.values for explanation in self.all_shap_explanations
-        ]
-        merged_data = [explanation.data for explanation in self.all_shap_explanations]
 
-        stacked_values = np.vstack(merged_values)
-        stacked_data = np.vstack(merged_data)
+        explanation_values = [
+            dict(zip(exp.feature_names, exp.values))
+            for exp in self.all_shap_explanations
+        ]
+        explanation_data = [
+            dict(zip(exp.feature_names, exp.data)) for exp in self.all_shap_explanations
+        ]
+        df_values = pd.DataFrame(explanation_values)
+        df_values.fillna(0, inplace=True)
+        df_data = pd.DataFrame(explanation_data)
+        # make sure they're aligned column-wise
+        df_data = df_data[df_values.columns]
+        feature_names = df_values.columns.to_list()
 
         global_explanation = Explanation(
             base_values=avg_base_values,
             feature_names=feature_names,
-            values=stacked_values,
-            data=stacked_data,
+            values=df_values.values,
+            data=df_data.values,
         )
 
         shap.plots.beeswarm(global_explanation, show=False, max_display=15)
@@ -126,33 +162,59 @@ class ResultsManager:
 
         plt.close()
 
+    def generate_coef_plot(self, n_samples) -> None:
+        if not self.coeff_results:
+            return
+        coef_df = pd.DataFrame(self.coeff_results)  # must set index col
+        coef_df.set_index("Test Sample", inplace=True)
+        coef_sorted = coef_df.abs().mean().sort_values(ascending=False).head(n_samples)
+        coef_asc = coef_sorted.sort_values(ascending=True)
+        fig = coef_asc.plot.barh(
+            title=f"{self.model_name} Top 15 Coefficient Plot for predicting {self.target_col}"
+        ).get_figure()
+        fig.savefig(
+            f"{self.results_dir}/plots/{self.model_name}_coefficients_plot.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+
     def save_shap_dataframes(self) -> None:
-        merged_values = np.vstack(
-            [explanation.values for explanation in self.all_shap_explanations]
-        )
-
-        merged_data = np.vstack(
-            [explanation.data for explanation in self.all_shap_explanations]
-        )
-
-        feature_names = self.all_shap_explanations[0].feature_names
+        exp_values = [
+            dict(zip(exp.feature_names, exp.values))
+            for exp in self.all_shap_explanations
+        ]
+        exp_data = [
+            dict(zip(exp.feature_names, exp.data)) for exp in self.all_shap_explanations
+        ]
+        df_values = pd.DataFrame(exp_values)
+        df_values.fillna(0, inplace=True)
+        df_data = pd.DataFrame(exp_data)
+        # make sure they're aligned column-wise
+        df_data = df_data[df_values.columns]
+        feature_names = df_values.columns.to_list()
 
         shap_cols = [f"{feature}_SHAP" for feature in feature_names]
         raw_cols = [f"{feature}_RAW" for feature in feature_names]
 
-        df_shap = pd.DataFrame(merged_values, columns=shap_cols)
-        df_raw = pd.DataFrame(merged_data, columns=raw_cols)
+        df_shap = pd.DataFrame(df_values.values, columns=shap_cols)
+        df_raw = pd.DataFrame(df_data.values, columns=raw_cols)
 
         all_df = pd.concat([df_shap, df_raw], axis=1)
-        file_path = f"{self.results_dir}/shap_record_table.parquet"
+        file_path = f"{self.results_dir}/shap_explanations_table.parquet"
         all_df.to_parquet(file_path, index=False)
 
     def save_shap_objects(self) -> None:
-        obj_path = f"{self.results_dir}/{self.model_name}_shap_explanations.joblib"
+        obj_path = f"{self.results_dir}/{self.model_name}_shap_explanations_obj.joblib"
         joblib.dump(self.all_shap_explanations, obj_path)
 
     def save_final_csv(self) -> None:
         df_summary = pd.DataFrame(self.rows_result)
         df_summary.to_csv(
-            f"{self.results_dir}/{self.model_name}_predictions_summary.csv"
+            f"{self.results_dir}/{self.model_name}_predictions_summary.csv", index=False
         )
+
+        if self.coeff_results:
+            df_coeff = pd.DataFrame(self.coeff_results)
+            df_coeff.to_csv(
+                f"{self.results_dir}/{self.model_name}_coefficients.csv", index=False
+            )

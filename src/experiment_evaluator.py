@@ -87,13 +87,15 @@ class ExperimentEvaluator:
                 }
             )
 
-            results_manager.process_split_data(
+            results_manager.generate_shap_waterfall(
                 pipeline=pipeline, X_train=X_train, X_test=X_test
             )
+            results_manager.record_split_coefs(pipeline, test_sample)
 
         results_manager.generate_bee_swarm_plot()
         results_manager.save_shap_objects()
         results_manager.save_shap_dataframes()
+        results_manager.generate_coef_plot(15)
         results_manager.save_final_csv()
         results_manager.record_experiment_setup(
             self.selected_scaler_sequences,
