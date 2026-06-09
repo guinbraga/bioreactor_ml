@@ -1,29 +1,33 @@
 import pandas as pd
 from pandas import DataFrame, Series
 import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator
+from sklearn.feature_selection import SelectorMixin
 from src.pipeline_components.scalers import CLRTransformer
 from scipy.spatial.distance import squareform
 from scipy.cluster import hierarchy
-from src.data_manager import DataManager
-from src.pipeline_components.scalers import CLRTransformer
 from scipy.stats import spearmanr
 
 
-class ClusterReducer(BaseEstimator, TransformerMixin):
-    def __init__(self, threshold: float = 0.95) -> None:
+class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
+    def __init__(self, threshold: float = 0.95, linkage: str = "ward") -> None:
         self.threshold = threshold
-        self.support_mask_ = None
-        self.feature_names_in_ = None
-        self.clusters: Series | None = None
+        self.linkage = linkage
 
     def fit(self, X: DataFrame, y=None):
+        self.n_features_in_ = X.shape[1]
+        self.feature_names_in_ = np.array(X.columns.to_list())
         # 1. Define Clusters
         clr_transformer = CLRTransformer().create_scaler(None)
         X_clr = clr_transformer.fit_transform(X)
         X_corr = np.abs(spearmanr(X_clr).statistic)
-        X_dist = squareform(1 - X_corr)
-        clustering = hierarchy.linkage(X_dist, method="single")
+        X_dist = 1 - X_corr
+        np.fill_diagonal(X_dist, 0.0)
+        X_dist = np.clip(
+            X_dist, 0.0, None
+        )  # To avoid floating number errors giving negative distances
+        X_dist = squareform(X_dist)
+        clustering = hierarchy.linkage(X_dist, method=self.linkage)
         inverse_threshold = 1 - self.threshold
         cluster_ids = hierarchy.fcluster(
             clustering, t=inverse_threshold, criterion="distance"
@@ -32,7 +36,7 @@ class ClusterReducer(BaseEstimator, TransformerMixin):
         self.clusters = pd.Series(clusters)
         df_dist = pd.DataFrame(squareform(X_dist), columns=X.columns, index=X.columns)
 
-        # 2. Find cluster medoids
+        # 2. Find cluster medoid
         medoids = []
         for cluster in self.clusters.unique():
             cluster_feats = self.clusters[self.clusters == cluster].index
@@ -41,7 +45,12 @@ class ClusterReducer(BaseEstimator, TransformerMixin):
             medoid = cluster_dist.iloc[arg_medoid].name
             medoids.append(medoid)
 
-        # 3. Attribute support_mask_
-        self.support_mask_ = np.array(medoids)
+        # 3. Create the boolean array of features to keep
+        mask = np.array([column in medoids for column in X.columns])
+
+        self.support_mask_ = mask
 
         return self
+
+    def _get_support_mask(self) -> np.ndarray:  # type: ignore[Override]
+        return self.support_mask_
