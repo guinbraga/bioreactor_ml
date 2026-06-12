@@ -4,6 +4,7 @@ from sklearn.model_selection import BaseCrossValidator, LeaveOneOut, LeaveOneGro
 from sklearn.metrics import log_loss
 from pipeline_optimizer import PipelineOptimizer
 from results_manager import ResultsManager
+from correlation_cluster_selector import CorrelationClusterSelector
 
 
 class ExperimentEvaluator:
@@ -34,12 +35,17 @@ class ExperimentEvaluator:
             target_col=str(y.name),
         )
 
+        cluster_selector = CorrelationClusterSelector(threshold=0.95, linkage="ward")
+        cluster_selector.set_output(transform="pandas")
+
+        X_filtered = cluster_selector.fit_transform(X)
+
         cv = self.cv
-        splits = cv.split(X, y, groups=self.groups)
+        splits = cv.split(X_filtered, y, groups=self.groups)
         for i, (train_index, test_index) in enumerate(splits):
-            X_train = X.iloc[train_index]
+            X_train = X_filtered.iloc[train_index]
             y_train = y.iloc[train_index]
-            X_test = X.iloc[test_index]
+            X_test = X_filtered.iloc[test_index]
             y_test = y.iloc[test_index]
             groups_train = None
 
@@ -52,7 +58,7 @@ class ExperimentEvaluator:
                 groups_train = self.groups.iloc[train_index]
 
             print(
-                f"Starting pipeline for split {i + 1} out of {cv.get_n_splits(X, y, self.groups)}"
+                f"Starting pipeline for split {i + 1} out of {cv.get_n_splits(X_filtered, y, self.groups)}"
             )
 
             pipeline_optimizer = PipelineOptimizer()
@@ -96,6 +102,7 @@ class ExperimentEvaluator:
         results_manager.save_shap_objects()
         results_manager.save_shap_dataframes()
         results_manager.generate_coef_plot(15)
+        results_manager.save_clusters(cluster_selector)
         results_manager.save_final_csv()
         results_manager.record_experiment_setup(
             self.selected_scaler_sequences,

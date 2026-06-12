@@ -40,4 +40,4 @@ class ElasticNetSelector:
 
 class PassthroughSelector:
     def create_selector(self, trial: Trial | FixedTrial) -> TransformerMixin:
-        return FunctionTransformer(func=None, feature_names_out='one-to-one')
+        return FunctionTransformer(func=None, feature_names_out="one-to-one")

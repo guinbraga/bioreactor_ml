@@ -3,7 +3,7 @@ from pandas import DataFrame, Series
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectorMixin
-from src.pipeline_components.scalers import CLRTransformer
+from pipeline_components.scalers import CLRTransformer
 from scipy.spatial.distance import squareform
 from scipy.cluster import hierarchy
 from scipy.stats import spearmanr
@@ -17,6 +17,7 @@ class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
     def fit(self, X: DataFrame, y=None):
         self.n_features_in_ = X.shape[1]
         self.feature_names_in_ = np.array(X.columns.to_list())
+
         # 1. Define Clusters
         clr_transformer = CLRTransformer().create_scaler(None)
         X_clr = clr_transformer.fit_transform(X)
@@ -33,17 +34,24 @@ class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
             clustering, t=inverse_threshold, criterion="distance"
         )
         clusters = dict(zip(X.columns, cluster_ids))
-        self.clusters = pd.Series(clusters)
+        self.clusters: Series = pd.Series(clusters)
         df_dist = pd.DataFrame(squareform(X_dist), columns=X.columns, index=X.columns)
 
-        # 2. Find cluster medoid
-        medoids = []
-        for cluster in self.clusters.unique():
-            cluster_feats = self.clusters[self.clusters == cluster].index
+        # 2. Find cluster medoids
+        cluster_medoids = self.clusters.copy().astype("str")
+        for cluster in cluster_medoids.unique():
+            selected_cluster = cluster_medoids[cluster_medoids == cluster]
+            cluster_feats = selected_cluster.index
             cluster_dist = df_dist.loc[cluster_feats, cluster_feats]
             arg_medoid = cluster_dist.sum().argmin()
             medoid = cluster_dist.iloc[arg_medoid].name
-            medoids.append(medoid)
+            cluster_medoids[cluster_medoids == cluster] = medoid
+        medoids = cluster_medoids.unique()
+        self.clusters = (
+            cluster_medoids  # we keep the series containing the medoid of each cluster
+        )
+        self.clusters.index.name = "OTU"
+        self.clusters.name = "Cluster Medoid"
 
         # 3. Create the boolean array of features to keep
         mask = np.array([column in medoids for column in X.columns])

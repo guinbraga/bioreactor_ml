@@ -1,18 +1,21 @@
-import os
-import shap
 import json
-import pandas as pd
-import numpy as np
+import os
+
 import matplotlib
+import numpy as np
+import pandas as pd
+import shap
 from sklearn.model_selection import BaseCrossValidator
+
+from correlation_cluster_selector import CorrelationClusterSelector
 
 matplotlib.use(
     "Agg"
 )  # so that we don't have problems generationg plots while running processes on all cores
 import matplotlib.pyplot as plt
-from sklearn.pipeline import Pipeline
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from shap import Explanation
+from sklearn.pipeline import Pipeline
 from sklearn.utils.parallel import joblib
 
 
@@ -205,6 +208,22 @@ class ResultsManager:
     def save_shap_objects(self) -> None:
         obj_path = f"{self.results_dir}/{self.model_name}_shap_explanations_obj.joblib"
         joblib.dump(self.all_shap_explanations, obj_path)
+
+    def save_clusters(self, cluster_selector: CorrelationClusterSelector) -> None:
+        """
+        Takes the cluster selector object, accesses it's clusters attribute
+        (a Series of ints representing a cluster) and saves a csv with the
+        cluster id and cluster medoid that each OTU belongs to.
+        """
+        clusters = cluster_selector.clusters
+        medoids = clusters.unique()
+        medoids_dict = {
+            medoid: list(clusters[clusters == medoid].index) for medoid in medoids
+        }
+        with open(
+            f"{self.results_dir}/../experiment_cluster.json", "w", encoding="utf-8"
+        ) as path:
+            json.dump(medoids_dict, path)
 
     def save_final_csv(self) -> None:
         df_summary = pd.DataFrame(self.rows_result)
