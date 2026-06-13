@@ -1,7 +1,9 @@
+import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import Any, Callable, TypedDict
 from data_manager import DataManager
 from experiment_evaluator import ExperimentEvaluator
+from persistence_manager import DataPersistenceManager, PlotPersistenceManager
 from pipeline_factory import PipelineFactory
 
 
@@ -55,14 +57,17 @@ def evaluate_experiment(
     selected_models: dict[str, ModelConfig],
     results_dir: str,
     on_complete: Callable | None = None,
-    on_begin: Callable | None = None,
+    on_model_begin: Callable | None = None,
+    on_split_begin: Callable | None = None,
+    on_persist: Callable | None = None,
+    persist_to_disk: bool = True,
 ):
     X, y = data_manager.get_X_y()
     pipeline_factory = PipelineFactory()
 
     for model_name, model_config in selected_models.items():
-        if on_begin:
-            on_begin(model_name)
+        if on_model_begin:
+            on_model_begin(model_name)
         cv_registry = pipeline_factory.cv_registry
         cv_obj = cv_registry[model_config["cv"]]
         groups = data_manager.get_groups(model_config["groups"])
@@ -72,8 +77,46 @@ def evaluate_experiment(
             selected_selectors=model_config["selected_selectors"],
             cv=cv_obj,
             groups=groups,
-            results_dir=results_dir,
+            on_split_begin=on_split_begin,
         )
-        evaluator.evaluate(X, y)
+        results_payload = evaluator.evaluate(X, y)
+
+        if persist_to_disk:
+            if on_persist:
+                on_persist(model_name)
+            model_results_dir = f"{results_dir}/{model_name}"
+
+            data_persister = DataPersistenceManager(
+                results_data_manager=results_payload["data_manager"],
+                results_dir=model_results_dir,
+                model_name=model_name,
+            )
+            data_persister.save_final_csv()
+            data_persister.save_clusters(results_payload["cluster_selector"])
+            data_persister.save_shap_dataframes()
+            data_persister.save_shap_objects()
+            data_persister.record_experiment_setup(
+                selected_scaler_sequences=model_config["selected_scaler_sequences"],
+                selected_selectors=model_config["selected_selectors"],
+                cv=cv_obj,
+                groups=groups,
+            )
+
+            plots_persister = PlotPersistenceManager(model_results_dir, model_name)
+            plots = results_payload["plots"]
+            for sample_id, fig in plots["waterfall_plots"].items():
+                if fig:
+                    plots_persister.persist_shap_waterfall(fig, sample_id)
+                    plt.close(fig)  # Close the figure AFTER saving to free RAM
+
+            # Process global plots
+            if plots["beeswarm_plot"]:
+                plots_persister.persist_beeswarm_plot(plots["beeswarm_plot"])
+                plt.close(plots["beeswarm_plot"])
+
+            if plots["coefficients_plot"]:
+                plots_persister.persist_coef_plot(plots["coefficients_plot"])
+                plt.close(plots["coefficients_plot"])
+
         if on_complete:
             on_complete(model_name)

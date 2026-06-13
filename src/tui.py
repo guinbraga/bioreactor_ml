@@ -49,12 +49,12 @@ splitter = questionary.select(
 ).ask()
 if splitter == "Leave One Group Out":
     groups = questionary.select(
-        "What column represents the groups?",
-        choices=available_columns
+        "What column represents the groups?", choices=available_columns
     ).ask()
 
 selected_models = questionary.checkbox(
-    "Select models to evaluate:", choices=available_components["models"],
+    "Select models to evaluate:",
+    choices=available_components["models"],
     validate=lambda x: len(x) > 0,
 ).ask()
 
@@ -97,18 +97,32 @@ for model in selected_models:
         "selected_scaler_sequences": selected_scaler_sequences,
         "selected_selectors": selected_selectors,
         "cv": splitter,
-        "groups": groups
+        "groups": groups,
     }
 
 
 results_dir = questionary.path("Which directory to save results?").ask()
 
+status_spinner = console.status("[bold green]Initializing experiment...[/bold green]")
 
-def on_begin(model_name: str):
+
+def on_model_begin(model_name: str):
     console.print(f"[green]Starting Evaluation for {model_name}...[/green]")
 
 
+def on_split_begin(i, n_splits):
+    console.print(f"Starting pipeline for split {i + 1} out of {n_splits}")
+
+
+def on_persist(model_name: str):
+    status_spinner.start()
+    status_spinner.update(
+        f"[bold cyan]Saving results and rendering plots for {model_name}...[/bold cyan]"
+    )
+
+
 def on_complete(model_name: str):
+    status_spinner.stop()
     console.print(f"[green]Finished Evaluation for {model_name}![/green]")
 
 
@@ -116,6 +130,8 @@ evaluate_experiment(
     data_manager=data_manager,
     selected_models=models_to_evaluate,
     results_dir=results_dir,
-    on_begin=on_begin,
+    on_model_begin=on_model_begin,
+    on_split_begin=on_split_begin,
     on_complete=on_complete,
+    on_persist=on_persist,
 )

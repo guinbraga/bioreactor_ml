@@ -1,39 +1,40 @@
-from pandas import DataFrame, Series
+from typing import Callable
 import numpy as np
-from sklearn.model_selection import BaseCrossValidator, LeaveOneOut, LeaveOneGroupOut
+from pandas import DataFrame, Series
 from sklearn.metrics import log_loss
+from sklearn.model_selection import BaseCrossValidator, LeaveOneGroupOut, LeaveOneOut
+
+from correlation_cluster_selector import CorrelationClusterSelector
 from pipeline_optimizer import PipelineOptimizer
 from results_manager import ResultsDataManager, ResultsPlotManager
-from correlation_cluster_selector import CorrelationClusterSelector
 
 
 class ExperimentEvaluator:
     def __init__(
         self,
         model_name: str,
-        results_dir: str,
         selected_scaler_sequences: list[tuple[str, ...]],
         selected_selectors: list[str],
         cv: BaseCrossValidator = LeaveOneOut(),
         groups: Series | None = None,
+        on_split_begin: Callable | None = None,
     ) -> None:
         self.model_name = model_name
         self.cv = cv
-        self.results_dir = results_dir
         self.selected_scaler_sequences = selected_scaler_sequences
         self.selected_selectors = selected_selectors
         self.groups = groups
+        self.on_split_begin = on_split_begin
         self.cv_registry: dict[str, BaseCrossValidator] = {
             "Leave One Out": LeaveOneOut(),
             "Leave One Group Out": LeaveOneGroupOut(),
         }
 
-    def evaluate(self, X: DataFrame, y: Series):
-        results_dir = f"{self.results_dir}/{self.model_name}"
+    def evaluate(self, X: DataFrame, y: Series) -> dict:
         target_col = str(y.name)
 
-        data_manager = ResultsDataManager(self.model_name, results_dir, target_col)
-        plot_manager = ResultsPlotManager(self.model_name, results_dir, target_col)
+        data_manager = ResultsDataManager(self.model_name)
+        plot_manager = ResultsPlotManager(self.model_name, target_col=target_col)
 
         cluster_selector = CorrelationClusterSelector(threshold=0.95, linkage="ward")
         cluster_selector.set_output(transform="pandas")
@@ -42,7 +43,14 @@ class ExperimentEvaluator:
 
         cv = self.cv
         splits = cv.split(X_filtered, y, groups=self.groups)
+        waterfall_plots = {}
+
         for i, (train_index, test_index) in enumerate(splits):
+
+            if self.on_split_begin:
+                n_splits = cv.get_n_splits(X_filtered, y, self.groups)
+                self.on_split_begin(i, n_splits)
+
             X_train = X_filtered.iloc[train_index]
             y_train = y.iloc[train_index]
             X_test = X_filtered.iloc[test_index]
@@ -56,10 +64,6 @@ class ExperimentEvaluator:
 
             if type(self.groups) is Series:
                 groups_train = self.groups.iloc[train_index]
-
-            print(
-                f"Starting pipeline for split {i + 1} out of {cv.get_n_splits(X_filtered, y, self.groups)}"
-            )
 
             pipeline_optimizer = PipelineOptimizer()
             pipeline, study = pipeline_optimizer.optimize_pipeline(
@@ -98,20 +102,29 @@ class ExperimentEvaluator:
                 pipeline=pipeline, X_train=X_train, X_test=X_test
             )
 
-            plot_manager.generate_shap_waterfall(explanation, test_sample)
+            waterfall_plot = plot_manager.generate_shap_waterfall(
+                explanation, test_sample
+            )
+            waterfall_plots[test_sample] = waterfall_plot
 
-        plot_manager.generate_bee_swarm_plot(data_manager.all_shap_explanations)
-        plot_manager.generate_coef_plot(data_manager.coeff_results, n_samples=15)
-        data_manager.save_shap_objects()
-        data_manager.save_shap_dataframes()
-        data_manager.save_clusters(cluster_selector)
-        data_manager.save_final_csv()
-        data_manager.record_experiment_setup(
-            self.selected_scaler_sequences,
-            self.selected_selectors,
-            self.cv,
-            self.groups,
+        beeswarm_plot = plot_manager.generate_bee_swarm_plot(
+            data_manager.all_shap_explanations
         )
+        coefficients_plot = plot_manager.generate_coef_plot(
+            data_manager.coeff_results, n_samples=15
+        )
+
+        results_payload = {
+            "plots": {
+                "waterfall_plots": waterfall_plots,
+                "beeswarm_plot": beeswarm_plot,
+                "coefficients_plot": coefficients_plot,
+            },
+            "data_manager": data_manager,
+            "cluster_selector": cluster_selector,
+        }
+
+        return results_payload
 
     def get_available_cv(self) -> list[str]:
         available_cv = [cv for cv in self.cv_registry.keys()]
