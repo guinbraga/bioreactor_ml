@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import BaseCrossValidator, LeaveOneOut, LeaveOneGroupOut
 from sklearn.metrics import log_loss
 from pipeline_optimizer import PipelineOptimizer
-from results_manager import ResultsManager
+from results_manager import ResultsDataManager, ResultsPlotManager
 from correlation_cluster_selector import CorrelationClusterSelector
 
 
@@ -29,11 +29,11 @@ class ExperimentEvaluator:
         }
 
     def evaluate(self, X: DataFrame, y: Series):
-        results_manager = ResultsManager(
-            model_name=self.model_name,
-            results_dir=f"{self.results_dir}/{self.model_name}",
-            target_col=str(y.name),
-        )
+        results_dir = f"{self.results_dir}/{self.model_name}"
+        target_col = str(y.name)
+
+        data_manager = ResultsDataManager(self.model_name, results_dir, target_col)
+        plot_manager = ResultsPlotManager(self.model_name, results_dir, target_col)
 
         cluster_selector = CorrelationClusterSelector(threshold=0.95, linkage="ward")
         cluster_selector.set_output(transform="pandas")
@@ -81,7 +81,7 @@ class ExperimentEvaluator:
             log_loss_score = log_loss(y_test, predictions_proba, labels=classes)
             best_params_dict = study.best_params
 
-            results_manager.record_split_metrics(
+            data_manager.record_split_metrics(
                 {
                     "Split": split,
                     "Test Sample": test_sample,
@@ -92,19 +92,21 @@ class ExperimentEvaluator:
                     "Best Pipeline Params": str(best_params_dict),
                 }
             )
+            data_manager.record_split_coefs(pipeline, test_sample)
 
-            results_manager.generate_shap_waterfall(
+            explanation = data_manager.compute_and_record_shap(
                 pipeline=pipeline, X_train=X_train, X_test=X_test
             )
-            results_manager.record_split_coefs(pipeline, test_sample)
 
-        results_manager.generate_bee_swarm_plot()
-        results_manager.save_shap_objects()
-        results_manager.save_shap_dataframes()
-        results_manager.generate_coef_plot(15)
-        results_manager.save_clusters(cluster_selector)
-        results_manager.save_final_csv()
-        results_manager.record_experiment_setup(
+            plot_manager.generate_shap_waterfall(explanation, test_sample)
+
+        plot_manager.generate_bee_swarm_plot(data_manager.all_shap_explanations)
+        plot_manager.generate_coef_plot(data_manager.coeff_results, n_samples=15)
+        data_manager.save_shap_objects()
+        data_manager.save_shap_dataframes()
+        data_manager.save_clusters(cluster_selector)
+        data_manager.save_final_csv()
+        data_manager.record_experiment_setup(
             self.selected_scaler_sequences,
             self.selected_selectors,
             self.cv,
