@@ -109,7 +109,6 @@ def evaluate_experiment(
                     plots_persister.persist_shap_waterfall(fig, sample_id)
                     plt.close(fig)
 
-            # Process global plots
             if plots["beeswarm_plot"]:
                 plots_persister.persist_beeswarm_plot(plots["beeswarm_plot"])
                 plt.close(plots["beeswarm_plot"])
@@ -117,6 +116,12 @@ def evaluate_experiment(
             if plots["coefficients_plot"]:
                 plots_persister.persist_coef_plot(plots["coefficients_plot"])
                 plt.close(plots["coefficients_plot"])
+
+            if plots["confusion_matrix"]:
+                plots_persister.persist_confusion_matrix(plots["confusion_matrix"])
+                plt.close(plots["confusion_matrix"])
+
+
 
         if on_complete:
             on_complete(model_name)

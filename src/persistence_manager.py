@@ -135,3 +135,10 @@ class PlotPersistenceManager:
             dpi=300,
             bbox_inches="tight",
         )
+
+    def persist_confusion_matrix(self, fig: Figure) -> None:
+        fig.savefig(
+            f"{self.plot_dir}/{self.model_name}_confusion_matrix.png",
+            dpi=300,
+            bbox_inches="tight",
+        )

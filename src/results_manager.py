@@ -4,8 +4,10 @@ import os
 import matplotlib
 from matplotlib.figure import Figure
 import numpy as np
+from numpy.typing import ArrayLike
 import pandas as pd
 import shap
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 
 
 # so we don't have problems generating plots while running processes on all cores
@@ -136,7 +138,7 @@ class ResultsPlotManager:
 
     def generate_coef_plot(
         self, coeff_results: list[dict], n_samples: int = 15
-    ) -> None:
+    ) -> None | Figure:
         if not coeff_results:
             return
 
@@ -149,5 +151,19 @@ class ResultsPlotManager:
         fig = coef_asc.plot.barh(
             title=f"{self.model_name} Top {n_samples} Coefficient Plot for predicting {self.target_col}"
         ).get_figure()
+
+        return fig
+
+    def generate_confusion_matrix(self, rows_result: list[dict]) -> Figure:
+        df_results = pd.DataFrame(rows_result)
+        y_true = df_results["True Class"].values
+        y_pred = df_results["Predicted Class"].values
+        labels = np.unique(y_true)
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        disp.plot(ax=ax, cmap="Blues")
+        plt.title(f"{self.model_name} Confusion Matrix for {self.target_col}")
 
         return fig

@@ -113,12 +113,14 @@ class ExperimentEvaluator:
         coefficients_plot = plot_manager.generate_coef_plot(
             data_manager.coeff_results, n_samples=15
         )
+        confusion_matrix = plot_manager.generate_confusion_matrix(data_manager.rows_result)
 
         results_payload = {
             "plots": {
                 "waterfall_plots": waterfall_plots,
                 "beeswarm_plot": beeswarm_plot,
                 "coefficients_plot": coefficients_plot,
+                "confusion_matrix": confusion_matrix,
             },
             "data_manager": data_manager,
             "cluster_selector": cluster_selector,
