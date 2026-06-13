@@ -2,12 +2,11 @@ import json
 import os
 
 import matplotlib
+from matplotlib.figure import Figure
 import numpy as np
 import pandas as pd
 import shap
-from sklearn.model_selection import BaseCrossValidator
 
-from correlation_cluster_selector import CorrelationClusterSelector
 
 # so we don't have problems generating plots while running processes on all cores
 matplotlib.use("Agg")
@@ -15,43 +14,16 @@ import matplotlib.pyplot as plt
 from pandas import DataFrame
 from shap import Explanation
 from sklearn.pipeline import Pipeline
-from sklearn.utils.parallel import joblib
 
 
 class ResultsDataManager:
     """Handles tracking metrics and saving text-based/data results (CSV, Parquet, JSON, Joblib)."""
 
-    def __init__(self, model_name: str, results_dir: str, target_col: str) -> None:
-        self.model_name = model_name
-        self.results_dir = results_dir
+    def __init__(self, target_col: str) -> None:
         self.target_col = target_col
         self.rows_result: list[dict] = []
         self.coeff_results: list[dict] = []
         self.all_shap_explanations: list[Explanation] = []
-
-        os.makedirs(self.results_dir, exist_ok=True)
-
-    def record_experiment_setup(
-        self,
-        selected_scaler_sequences: list[tuple[str, ...]],
-        selected_selectors: list[str],
-        cv: BaseCrossValidator,
-        groups,
-    ) -> None:
-        if groups is not None:
-            groups = groups.name
-
-        experiment_setup = {
-            "Model": self.model_name,
-            "Target Column": self.target_col,
-            "Scaler Sequences Evaluated": selected_scaler_sequences,
-            "Feature Selection Techniques Evaluated": selected_selectors,
-            "Cross Validation Method": cv.__str__(),
-            "Groups": str(groups),
-        }
-
-        with open(f"{self.results_dir}/experiment_config.json", "w") as config_file:
-            json.dump(experiment_setup, config_file, indent=4)
 
     def record_split_metrics(self, split_data: dict) -> None:
         self.rows_result.append(split_data)
@@ -101,92 +73,27 @@ class ResultsDataManager:
         self.all_shap_explanations.append(explanation)
         return explanation
 
-    def save_shap_dataframes(self) -> None:
-        if not self.all_shap_explanations:
-            return
-
-        exp_values = [
-            dict(zip(exp.feature_names, exp.values))
-            for exp in self.all_shap_explanations
-        ]
-        exp_data = [
-            dict(zip(exp.feature_names, exp.data)) for exp in self.all_shap_explanations
-        ]
-        df_values = pd.DataFrame(exp_values)
-        df_values.fillna(0, inplace=True)
-        df_data = pd.DataFrame(exp_data)
-
-        # make sure they're aligned column-wise
-        df_data = df_data[df_values.columns]
-        feature_names = df_values.columns.to_list()
-
-        shap_cols = [f"{feature}_SHAP" for feature in feature_names]
-        raw_cols = [f"{feature}_RAW" for feature in feature_names]
-
-        df_shap = pd.DataFrame(df_values.values, columns=shap_cols)
-        df_raw = pd.DataFrame(df_data.values, columns=raw_cols)
-
-        all_df = pd.concat([df_shap, df_raw], axis=1)
-        file_path = f"{self.results_dir}/shap_explanations_table.parquet"
-        all_df.to_parquet(file_path, index=False)
-
-    def save_shap_objects(self) -> None:
-        if not self.all_shap_explanations:
-            return
-        obj_path = f"{self.results_dir}/{self.model_name}_shap_explanations_obj.joblib"
-        joblib.dump(self.all_shap_explanations, obj_path)
-
-    def save_clusters(self, cluster_selector: CorrelationClusterSelector) -> None:
-        """
-        Saves clusters composition info as json for later analysis
-        """
-        clusters = cluster_selector.clusters
-        medoids = clusters.unique()
-        medoids_dict = {
-            medoid: list(clusters[clusters == medoid].index) for medoid in medoids
-        }
-        with open(
-            f"{self.results_dir}/../experiment_cluster.json", "w", encoding="utf-8"
-        ) as path:
-            json.dump(medoids_dict, path, indent=4)
-
-    def save_final_csv(self) -> None:
-        df_summary = pd.DataFrame(self.rows_result)
-        df_summary.to_csv(
-            f"{self.results_dir}/{self.model_name}_predictions_summary.csv", index=False
-        )
-
-        if self.coeff_results:
-            df_coeff = pd.DataFrame(self.coeff_results)
-            df_coeff.to_csv(
-                f"{self.results_dir}/{self.model_name}_coefficients.csv", index=False
-            )
-
 
 class ResultsPlotManager:
     """Handles creating and saving all figures and plots."""
 
-    def __init__(self, model_name: str, results_dir: str, target_col: str) -> None:
+    def __init__(self, model_name: str, target_col: str) -> None:
         self.model_name = model_name
         self.target_col = target_col
-        self.plot_dir = f"{results_dir}/plots"
 
-        os.makedirs(self.plot_dir, exist_ok=True)
-
-    def generate_shap_waterfall(self, explanation: Explanation, sample_id: str) -> None:
+    def generate_shap_waterfall(
+        self, explanation: Explanation, sample_id: str
+    ) -> Figure:
         shap.plots.waterfall(explanation, show=False, max_display=15)
         plt.title(
             f"{self.model_name} - Feature Importances for {sample_id} Prediction of {self.target_col}"
         )
+        fig = plt.gcf()
+        return fig
 
-        plt.savefig(
-            f"{self.plot_dir}/{self.model_name}_waterfall_{sample_id}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.close()
-
-    def generate_bee_swarm_plot(self, all_shap_explanations: list[Explanation]) -> None:
+    def generate_bee_swarm_plot(
+        self, all_shap_explanations: list[Explanation]
+    ) -> Figure | None:
         """
         Genearates a Beeswarm plot at the end of the experiment. As we are dealing
         with Leave One Out or Leave One Group Out, SHAP values are stacked from
@@ -222,12 +129,8 @@ class ResultsPlotManager:
         plt.title(
             f"{self.model_name} Global Beeswarm plot for predicting {self.target_col}"
         )
-        plt.savefig(
-            f"{self.plot_dir}/{self.model_name}_beeswarm.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.close()
+        fig = plt.gcf()
+        return fig
 
     def generate_coef_plot(
         self, coeff_results: list[dict], n_samples: int = 15
@@ -244,9 +147,4 @@ class ResultsPlotManager:
             title=f"{self.model_name} Top {n_samples} Coefficient Plot for predicting {self.target_col}"
         ).get_figure()
 
-        fig.savefig(
-            f"{self.plot_dir}/{self.model_name}_coefficients_plot.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-        plt.close(fig)
+        return fig
