@@ -84,6 +84,7 @@ class ResultsPlotManager:
     def generate_shap_waterfall(
         self, explanation: Explanation, sample_id: str
     ) -> Figure:
+        plt.figure(figsize=(10, 8))
         shap.plots.waterfall(explanation, show=False, max_display=15)
         plt.title(
             f"{self.model_name} - Feature Importances for {sample_id} Prediction of {self.target_col}"
@@ -125,6 +126,7 @@ class ResultsPlotManager:
             data=df_data.values,
         )
 
+        plt.figure(figsize=(10, 8))
         shap.plots.beeswarm(global_explanation, show=False, max_display=15)
         plt.title(
             f"{self.model_name} Global Beeswarm plot for predicting {self.target_col}"
@@ -143,6 +145,7 @@ class ResultsPlotManager:
         coef_sorted = coef_df.abs().mean().sort_values(ascending=False).head(n_samples)
         coef_asc = coef_sorted.sort_values(ascending=True)
 
+        plt.figure(figsize=(10, 8))
         fig = coef_asc.plot.barh(
             title=f"{self.model_name} Top {n_samples} Coefficient Plot for predicting {self.target_col}"
         ).get_figure()

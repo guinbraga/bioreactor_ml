@@ -107,7 +107,7 @@ def evaluate_experiment(
             for sample_id, fig in plots["waterfall_plots"].items():
                 if fig:
                     plots_persister.persist_shap_waterfall(fig, sample_id)
-                    plt.close(fig)  # Close the figure AFTER saving to free RAM
+                    plt.close(fig)
 
             # Process global plots
             if plots["beeswarm_plot"]:
