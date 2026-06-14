@@ -9,7 +9,7 @@ from pipeline_optimizer import PipelineOptimizer
 from results_manager import ResultsDataManager, ResultsPlotManager
 
 
-class ExperimentEvaluator:
+class ClassificationEvaluator:
     def __init__(
         self,
         model_name: str,
@@ -33,7 +33,7 @@ class ExperimentEvaluator:
     def evaluate(self, X: DataFrame, y: Series) -> dict:
         target_col = str(y.name)
 
-        data_manager = ResultsDataManager(self.model_name)
+        results_data_manager = ResultsDataManager(self.model_name)
         plot_manager = ResultsPlotManager(self.model_name, target_col=target_col)
 
         cluster_selector = CorrelationClusterSelector(threshold=0.95, linkage="ward")
@@ -85,7 +85,7 @@ class ExperimentEvaluator:
             log_loss_score = log_loss(y_test, predictions_proba, labels=classes)
             best_params_dict = study.best_params
 
-            data_manager.record_split_metrics(
+            results_data_manager.record_split_metrics(
                 {
                     "Split": split,
                     "Test Sample": test_sample,
@@ -96,9 +96,9 @@ class ExperimentEvaluator:
                     "Best Pipeline Params": str(best_params_dict),
                 }
             )
-            data_manager.record_split_coefs(pipeline, test_sample)
+            results_data_manager.record_split_coefs(pipeline, test_sample)
 
-            explanation = data_manager.compute_and_record_shap(
+            explanation = results_data_manager.compute_and_record_shap(
                 pipeline=pipeline, X_train=X_train, X_test=X_test
             )
 
@@ -107,13 +107,15 @@ class ExperimentEvaluator:
             )
             waterfall_plots[test_sample] = waterfall_plot
 
+        classification_report = results_data_manager.record_classification_report()
+
         beeswarm_plot = plot_manager.generate_bee_swarm_plot(
-            data_manager.all_shap_explanations
+            results_data_manager.all_shap_explanations
         )
         coefficients_plot = plot_manager.generate_coef_plot(
-            data_manager.coeff_results, n_samples=15
+            results_data_manager.coeff_results, n_samples=15
         )
-        confusion_matrix = plot_manager.generate_confusion_matrix(data_manager.rows_result)
+        confusion_matrix = plot_manager.generate_confusion_matrix(results_data_manager.rows_result)
 
         results_payload = {
             "plots": {
@@ -122,7 +124,8 @@ class ExperimentEvaluator:
                 "coefficients_plot": coefficients_plot,
                 "confusion_matrix": confusion_matrix,
             },
-            "data_manager": data_manager,
+            "data_manager": results_data_manager,
+            "classification_report": classification_report,
             "cluster_selector": cluster_selector,
         }
 

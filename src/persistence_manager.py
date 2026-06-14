@@ -84,7 +84,7 @@ class DataPersistenceManager:
         file_path = f"{self.results_dir}/shap_explanations_table.parquet"
         all_df.to_parquet(file_path, index=False)
 
-    def record_experiment_setup(
+    def save_experiment_setup(
         self,
         selected_scaler_sequences: list[tuple[str, ...]],
         selected_selectors: list[str],
@@ -105,6 +105,16 @@ class DataPersistenceManager:
 
         with open(f"{self.results_dir}/experiment_config.json", "w") as config_file:
             json.dump(experiment_setup, config_file, indent=4)
+
+    def save_classification_report(self) -> None:
+        classification_report = self.results_data_manager.record_classification_report()
+        df_report = pd.DataFrame(classification_report)
+        df_report.to_csv(
+            f"{self.results_dir}/{self.model_name}_classification_report.csv"
+        )
+        df_report.to_latex(
+            f"{self.results_dir}/{self.model_name}_classification_report.tex"
+        )
 
 
 class PlotPersistenceManager:

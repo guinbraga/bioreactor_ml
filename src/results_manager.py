@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 import pandas as pd
 import shap
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay, classification_report, confusion_matrix
 
 
 # so we don't have problems generating plots while running processes on all cores
@@ -74,6 +74,14 @@ class ResultsDataManager:
 
         self.all_shap_explanations.append(explanation)
         return explanation
+
+    def record_classification_report(self) -> dict:
+        results_df = pd.DataFrame(self.rows_result)
+        y_true = results_df["True Class"].values
+        y_pred = results_df["Predicted Class"].values
+        labels = np.unique(y_true) #type: ignore
+        report = classification_report(y_true, y_pred, labels=labels, output_dict=True)
+        return report #type: ignore
 
 
 class ResultsPlotManager:

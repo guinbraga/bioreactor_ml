@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import Any, Callable, TypedDict
 from data_manager import DataManager
-from experiment_evaluator import ExperimentEvaluator
+from classification_evaluator import ClassificationEvaluator
 from persistence_manager import DataPersistenceManager, PlotPersistenceManager
 from pipeline_factory import PipelineFactory
 
@@ -71,7 +71,7 @@ def evaluate_experiment(
         cv_registry = pipeline_factory.cv_registry
         cv_obj = cv_registry[model_config["cv"]]
         groups = data_manager.get_groups(model_config["groups"])
-        evaluator = ExperimentEvaluator(
+        evaluator = ClassificationEvaluator(
             model_name=model_name,
             selected_scaler_sequences=model_config["selected_scaler_sequences"],
             selected_selectors=model_config["selected_selectors"],
@@ -95,7 +95,8 @@ def evaluate_experiment(
             data_persister.save_clusters(results_payload["cluster_selector"])
             data_persister.save_shap_dataframes()
             data_persister.save_shap_objects()
-            data_persister.record_experiment_setup(
+            data_persister.save_classification_report()
+            data_persister.save_experiment_setup(
                 selected_scaler_sequences=model_config["selected_scaler_sequences"],
                 selected_selectors=model_config["selected_selectors"],
                 cv=cv_obj,
@@ -120,8 +121,6 @@ def evaluate_experiment(
             if plots["confusion_matrix"]:
                 plots_persister.persist_confusion_matrix(plots["confusion_matrix"])
                 plt.close(plots["confusion_matrix"])
-
-
 
         if on_complete:
             on_complete(model_name)
