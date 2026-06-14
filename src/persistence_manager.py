@@ -116,6 +116,12 @@ class DataPersistenceManager:
             f"{self.results_dir}/{self.model_name}_classification_report.tex"
         )
 
+    def save_top_feat_importances(self, top_features: list[str]) -> None:
+        with open(f"{self.results_dir}/{self.model_name}_top_features.csv", "w", encoding="utf-8") as features_file:
+            features_file.write("feature,\n")
+            for feature in top_features:
+                features_file.write(feature+",\n")
+
 
 class PlotPersistenceManager:
     def __init__(self, results_dir: str, model_name: str) -> None:

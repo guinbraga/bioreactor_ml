@@ -108,6 +108,7 @@ class ClassificationEvaluator:
             waterfall_plots[test_sample] = waterfall_plot
 
         classification_report = results_data_manager.record_classification_report()
+        feature_importances = results_data_manager.get_feature_importances()
 
         beeswarm_plot = plot_manager.generate_bee_swarm_plot(
             results_data_manager.all_shap_explanations
@@ -127,6 +128,7 @@ class ClassificationEvaluator:
             "data_manager": results_data_manager,
             "classification_report": classification_report,
             "cluster_selector": cluster_selector,
+            "feature_importances": feature_importances,
         }
 
         return results_payload

@@ -1,19 +1,19 @@
-import json
-import os
-
 import matplotlib
 from matplotlib.figure import Figure
 import numpy as np
-from numpy.typing import ArrayLike
 import pandas as pd
 import shap
-from sklearn.metrics import ConfusionMatrixDisplay, classification_report, confusion_matrix
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    classification_report,
+    confusion_matrix,
+)
 
 
 # so we don't have problems generating plots while running processes on all cores
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from shap import Explanation
 from sklearn.pipeline import Pipeline
 
@@ -37,10 +37,10 @@ class ResultsDataManager:
             return
 
         feature_names = pipeline[:-1].get_feature_names_out()
-        coefficients = estimator.coef_[0]
+        coefficients = estimator.coef_[0] # type: ignore
 
         coef_dict = {"Test Sample": sample_id}
-        coef_dict.update(dict(zip(feature_names, coefficients)))
+        coef_dict.update(dict(zip(feature_names, coefficients))) # type: ignore
 
         self.coeff_results.append(coef_dict)
 
@@ -79,9 +79,27 @@ class ResultsDataManager:
         results_df = pd.DataFrame(self.rows_result)
         y_true = results_df["True Class"].values
         y_pred = results_df["Predicted Class"].values
-        labels = np.unique(y_true) #type: ignore
+        labels = np.unique(y_true)  # type: ignore
         report = classification_report(y_true, y_pred, labels=labels, output_dict=True)
-        return report #type: ignore
+        return report  # type: ignore
+
+    def get_feature_importances(self) -> Series:
+        is_linear_model = self.coeff_results
+        if is_linear_model:
+            coefficients_df = pd.DataFrame(self.coeff_results)
+            coefficients_df.set_index("Test Sample", inplace=True)
+            mean_coefficients = coefficients_df.abs().mean()
+            return mean_coefficients
+        else:
+            explanation_values = [
+                dict(zip(exp.feature_names, exp.values))
+                for exp in self.all_shap_explanations
+            ]
+
+            shap_df = pd.DataFrame(explanation_values)
+            shap_df.fillna(0, inplace=True)
+            mean_shap_values = shap_df.abs().mean()
+            return mean_shap_values
 
 
 class ResultsPlotManager:
@@ -133,7 +151,7 @@ class ResultsPlotManager:
             base_values=avg_base_values,
             feature_names=feature_names,
             values=df_values.values,
-            data=df_data.values,
+            data=df_data.values, #type: ignore
         )
 
         plt.figure(figsize=(10, 8))
@@ -166,7 +184,7 @@ class ResultsPlotManager:
         df_results = pd.DataFrame(rows_result)
         y_true = df_results["True Class"].values
         y_pred = df_results["Predicted Class"].values
-        labels = np.unique(y_true)
+        labels = np.unique(y_true) #type: ignore
         cm = confusion_matrix(y_true, y_pred, labels=labels)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
         fig, ax = plt.subplots(figsize=(10, 8))

@@ -5,6 +5,7 @@ from data_manager import DataManager
 from classification_evaluator import ClassificationEvaluator
 from persistence_manager import DataPersistenceManager, PlotPersistenceManager
 from pipeline_factory import PipelineFactory
+from class_features_picker import TopFeaturesPicker
 
 
 class ModelConfig(TypedDict):
@@ -80,6 +81,9 @@ def evaluate_experiment(
             on_split_begin=on_split_begin,
         )
         results_payload = evaluator.evaluate(X, y)
+        top_features = TopFeaturesPicker().pick_top_features(
+            results_payload["feature_importances"]
+        )
 
         if persist_to_disk:
             if on_persist:
@@ -96,6 +100,7 @@ def evaluate_experiment(
             data_persister.save_shap_dataframes()
             data_persister.save_shap_objects()
             data_persister.save_classification_report()
+            data_persister.save_top_feat_importances(top_features)
             data_persister.save_experiment_setup(
                 selected_scaler_sequences=model_config["selected_scaler_sequences"],
                 selected_selectors=model_config["selected_selectors"],
