@@ -1,3 +1,5 @@
+from typing import Type
+
 import matplotlib
 from matplotlib.figure import Figure
 import numpy as np
@@ -37,10 +39,10 @@ class ResultsDataManager:
             return
 
         feature_names = pipeline[:-1].get_feature_names_out()
-        coefficients = estimator.coef_[0] # type: ignore
+        coefficients = estimator.coef_[0]  # type: ignore
 
         coef_dict = {"Test Sample": sample_id}
-        coef_dict.update(dict(zip(feature_names, coefficients))) # type: ignore
+        coef_dict.update(dict(zip(feature_names, coefficients)))  # type: ignore
 
         self.coeff_results.append(coef_dict)
 
@@ -60,8 +62,29 @@ class ResultsDataManager:
             X_test_transformed, columns=feature_names, index=X_test.index
         )
 
-        explainer = shap.Explainer(model=pipeline[-1], masker=X_train_df)
-        shap_values = explainer(X_test_df)
+        model = pipeline[-1]
+        call_kwargs = {}
+        try:  # See if the model has a dedicated Explainer, such as LinearExplainer...
+            explainer = shap.Explainer(model=model, masker=X_train_df, seed=47)
+        except TypeError:  # if not, it could use the general PermutationExplainer
+            raw_predict_function = getattr(
+                model, "predict_proba", getattr(model, "predict", None)
+            )
+            if raw_predict_function is None:
+                raise TypeError(
+                    f"Model {model} does not have a valid predict or predict_proba function"
+                )
+            # ensure the function is used on numpy arrays:
+            predict_function = lambda x: raw_predict_function(
+                x.values if hasattr(x, "values") else x
+            )
+
+            explainer = shap.Explainer(predict_function, masker=X_train_df, seed=47)
+            n_features = X_test_df.shape[1]
+            call_kwargs["max_evals"] = (
+                15 * n_features
+            )  # to ensure stability and converge
+        shap_values = explainer(X_test_df, **call_kwargs)
 
         # different Explainer objects return different-shaped objects
         if isinstance(shap_values, list):
@@ -151,7 +174,7 @@ class ResultsPlotManager:
             base_values=avg_base_values,
             feature_names=feature_names,
             values=df_values.values,
-            data=df_data.values, #type: ignore
+            data=df_data.values,  # type: ignore
         )
 
         plt.figure(figsize=(10, 8))
@@ -184,7 +207,7 @@ class ResultsPlotManager:
         df_results = pd.DataFrame(rows_result)
         y_true = df_results["True Class"].values
         y_pred = df_results["Predicted Class"].values
-        labels = np.unique(y_true) #type: ignore
+        labels = np.unique(y_true)  # type: ignore
         cm = confusion_matrix(y_true, y_pred, labels=labels)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
         fig, ax = plt.subplots(figsize=(10, 8))

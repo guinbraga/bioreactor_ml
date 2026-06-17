@@ -1,18 +1,15 @@
-from sklearn.model_selection import BaseCrossValidator, LeaveOneGroupOut, LeaveOneOut
-from sklearn.pipeline import Pipeline
 from optuna.trial import FixedTrial, Trial
-from pipeline_components.models.elastic_net import ElasticNetStrategy
-from pipeline_components.models.l1_logreg import L1LogisticRegressionStrategy
-from pipeline_components.models.linear_svm import LinearSVMStrategy
-from pipeline_components.selectors import (
-    BaseSelectorStrategy,
-    ElasticNetSelector,
-    PassthroughSelector,
-)
+from sklearn.model_selection import BaseCrossValidator, LeaveOneGroupOut, LeaveOneOut
+from sklearn.pipeline import Pipeline, make_pipeline
+
 from pipeline_components.models import (
     BaseModelStrategy,
     RandomForestStrategy,
 )
+from pipeline_components.models.elastic_net import ElasticNetStrategy
+from pipeline_components.models.l1_logreg import L1LogisticRegressionStrategy
+from pipeline_components.models.linear_svm import LinearSVMStrategy
+from pipeline_components.models.radial_svm import RadialSVMStrategy
 from pipeline_components.scalers import (
     BaseScalerStrategy,
     BinarizerScaler,
@@ -21,7 +18,11 @@ from pipeline_components.scalers import (
     RelativeAbundanceScaler,
     Standardizer,
 )
-from sklearn.pipeline import make_pipeline
+from pipeline_components.selectors import (
+    BaseSelectorStrategy,
+    ElasticNetSelector,
+    PassthroughSelector,
+)
 
 
 class PipelineFactory:
@@ -31,6 +32,7 @@ class PipelineFactory:
             "L1 Logistic Regression": L1LogisticRegressionStrategy(),
             "Elastic Net": ElasticNetStrategy(),
             "SVM-linear": LinearSVMStrategy(),
+            "SVM-radial": RadialSVMStrategy(),
         }
 
         self.scaler_registry: dict[str, BaseScalerStrategy] = {

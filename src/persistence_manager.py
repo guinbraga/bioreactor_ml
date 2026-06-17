@@ -89,6 +89,7 @@ class DataPersistenceManager:
         selected_scaler_sequences: list[tuple[str, ...]],
         selected_selectors: list[str],
         cv: BaseCrossValidator,
+        target_col: str,
         groups,
     ) -> None:
         if groups is not None:
@@ -96,7 +97,7 @@ class DataPersistenceManager:
 
         experiment_setup = {
             "Model": self.model_name,
-            "Target Column": self.results_data_manager.target_col,
+            "Target Column": target_col,
             "Scaler Sequences Evaluated": selected_scaler_sequences,
             "Feature Selection Techniques Evaluated": selected_selectors,
             "Cross Validation Method": cv.__str__(),

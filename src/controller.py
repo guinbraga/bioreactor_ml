@@ -106,6 +106,7 @@ def evaluate_experiment(
                 selected_selectors=model_config["selected_selectors"],
                 cv=cv_obj,
                 groups=groups,
+                target_col=str(y.name),
             )
 
             plots_persister = PlotPersistenceManager(model_results_dir, model_name)
