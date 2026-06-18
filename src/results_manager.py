@@ -47,7 +47,7 @@ class ResultsDataManager:
         self.coeff_results.append(coef_dict)
 
     def compute_and_record_shap(
-        self, pipeline: Pipeline, X_train: DataFrame, X_test: DataFrame
+        self, pipeline: Pipeline, X_train: DataFrame, X_test: DataFrame, partition_tree
     ) -> Explanation:
         """Computes the SHAP explanation, stores it in memory, and returns it."""
         preprocessing = pipeline[:-1]
@@ -63,28 +63,13 @@ class ResultsDataManager:
         )
 
         model = pipeline[-1]
-        call_kwargs = {}
-        try:  # See if the model has a dedicated Explainer, such as LinearExplainer...
-            explainer = shap.Explainer(model=model, masker=X_train_df, seed=47)
-        except TypeError:  # if not, it could use the general PermutationExplainer
-            raw_predict_function = getattr(
-                model, "predict_proba", getattr(model, "predict", None)
-            )
-            if raw_predict_function is None:
-                raise TypeError(
-                    f"Model {model} does not have a valid predict or predict_proba function"
-                )
-            # ensure the function is used on numpy arrays:
-            predict_function = lambda x: raw_predict_function(
-                x.values if hasattr(x, "values") else x
-            )
-
-            explainer = shap.Explainer(predict_function, masker=X_train_df, seed=47)
-            n_features = X_test_df.shape[1]
-            call_kwargs["max_evals"] = (
-                15 * n_features
-            )  # to ensure stability and converge
-        shap_values = explainer(X_test_df, **call_kwargs)
+        partition_mask = shap.maskers.Partition(
+            X_train_df.to_numpy(), clustering=partition_tree
+        )
+        explainer = shap.PartitionExplainer(
+            model.predict_proba, partition_mask, partition_tree=partition_tree
+        )
+        shap_values = explainer(X_test_df)
 
         # different Explainer objects return different-shaped objects
         if isinstance(shap_values, list):

@@ -36,24 +36,23 @@ class ClassificationEvaluator:
         results_data_manager = ResultsDataManager(self.model_name)
         plot_manager = ResultsPlotManager(self.model_name, target_col=target_col)
 
-        cluster_selector = CorrelationClusterSelector(threshold=0.95, linkage="ward")
-        cluster_selector.set_output(transform="pandas")
-
-        X_filtered = cluster_selector.fit_transform(X)
+        cluster_selector = CorrelationClusterSelector(
+            threshold=0.95, linkage="complete"
+        )
+        cluster_selector.fit(X)
 
         cv = self.cv
-        splits = cv.split(X_filtered, y, groups=self.groups)
+        splits = cv.split(X, y, groups=self.groups)
         waterfall_plots = {}
 
         for i, (train_index, test_index) in enumerate(splits):
-
             if self.on_split_begin:
-                n_splits = cv.get_n_splits(X_filtered, y, self.groups)
+                n_splits = cv.get_n_splits(X, y, self.groups)
                 self.on_split_begin(i, n_splits)
 
-            X_train = X_filtered.iloc[train_index]
+            X_train = X.iloc[train_index]
             y_train = y.iloc[train_index]
-            X_test = X_filtered.iloc[test_index]
+            X_test = X.iloc[test_index]
             y_test = y.iloc[test_index]
             groups_train = None
 
@@ -99,7 +98,10 @@ class ClassificationEvaluator:
             results_data_manager.record_split_coefs(pipeline, test_sample)
 
             explanation = results_data_manager.compute_and_record_shap(
-                pipeline=pipeline, X_train=X_train, X_test=X_test
+                pipeline=pipeline,
+                X_train=X_train,
+                X_test=X_test,
+                partition_tree=cluster_selector.partition_tree_,
             )
 
             waterfall_plot = plot_manager.generate_shap_waterfall(
@@ -116,7 +118,9 @@ class ClassificationEvaluator:
         coefficients_plot = plot_manager.generate_coef_plot(
             results_data_manager.coeff_results, n_samples=15
         )
-        confusion_matrix = plot_manager.generate_confusion_matrix(results_data_manager.rows_result)
+        confusion_matrix = plot_manager.generate_confusion_matrix(
+            results_data_manager.rows_result
+        )
 
         results_payload = {
             "plots": {
