@@ -108,7 +108,7 @@ class DataPersistenceManager:
             json.dump(experiment_setup, config_file, indent=4)
 
     def save_classification_report(self) -> None:
-        classification_report = self.results_data_manager.record_classification_report()
+        classification_report = self.results_data_manager.create_classification_report()
         df_report = pd.DataFrame(classification_report)
         df_report.to_csv(
             f"{self.results_dir}/{self.model_name}_classification_report.csv"
@@ -118,10 +118,14 @@ class DataPersistenceManager:
         )
 
     def save_top_feat_importances(self, top_features: list[str]) -> None:
-        with open(f"{self.results_dir}/{self.model_name}_top_features.csv", "w", encoding="utf-8") as features_file:
+        with open(
+            f"{self.results_dir}/{self.model_name}_top_features.csv",
+            "w",
+            encoding="utf-8",
+        ) as features_file:
             features_file.write("feature,\n")
             for feature in top_features:
-                features_file.write(feature+",\n")
+                features_file.write(feature + ",\n")
 
 
 class PlotPersistenceManager:

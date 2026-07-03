@@ -35,7 +35,6 @@ class ClassificationEvaluator:
 
         results_data_manager = ResultsDataManager(self.model_name)
         plot_manager = ResultsPlotManager(self.model_name, target_col=target_col)
-
         cluster_selector = CorrelationClusterSelector(
             threshold=0.95, linkage="complete"
         )
@@ -101,7 +100,6 @@ class ClassificationEvaluator:
                 pipeline=pipeline,
                 X_train=X_train,
                 X_test=X_test,
-                partition_tree=cluster_selector.partition_tree_,
             )
 
             waterfall_plot = plot_manager.generate_shap_waterfall(
@@ -109,7 +107,7 @@ class ClassificationEvaluator:
             )
             waterfall_plots[test_sample] = waterfall_plot
 
-        classification_report = results_data_manager.record_classification_report()
+        classification_report = results_data_manager.create_classification_report()
         feature_importances = results_data_manager.get_feature_importances()
 
         beeswarm_plot = plot_manager.generate_bee_swarm_plot(

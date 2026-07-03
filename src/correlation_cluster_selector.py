@@ -1,7 +1,6 @@
 import pandas as pd
 from pandas import DataFrame, Series
 import numpy as np
-from pandas.io.formats.style import non_reducing_slice
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectorMixin
 from pipeline_components.scalers import CLRTransformer
@@ -22,9 +21,12 @@ def proportionality_rho(X):
 
 
 class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
-    def __init__(self, threshold: float = 0.95, linkage: str = "complete") -> None:
+    def __init__(
+        self, threshold: float = 0.95, linkage: str = "complete", apply_clr: bool = True
+    ) -> None:
         self.threshold = threshold
         self.linkage = linkage
+        self.apply_clr = apply_clr
 
     def fit(self, X: DataFrame, y=None):
         self.n_features_in_ = X.shape[1]
@@ -47,11 +49,16 @@ class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
         Transforms data using CLR and computes a rho-proportionality-based distance matrix.
         """
 
-        clr_transformer = CLRTransformer().create_scaler(None)
-        X_clr = clr_transformer.fit_transform(X)
+        if self.apply_clr:
+            clr_transformer = (
+                CLRTransformer().create_scaler(None).set_output(transform="pandas")
+            )
+            X_processed = clr_transformer.fit_transform(X)
+        else:
+            X_processed = X
 
-        X_rho = proportionality_rho(X_clr)
-        X_dist = 1 - X_rho
+        X_corr = X_processed.corr("pearson")
+        X_dist = np.array(1 - X_corr)
 
         np.fill_diagonal(X_dist, 0.0)
         X_dist = np.clip(X_dist, 0.0, None)
@@ -78,7 +85,7 @@ class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
             medoid = cluster_dist.iloc[arg_medoid].name
             cluster_medoids[cluster_medoids == cluster] = medoid
 
-        # Finalize the exposed public series properties
+        # Finalize the cluster Series
         self.clusters = cluster_medoids
         self.clusters.index.name = "OTU"
         self.clusters.name = "Cluster Medoid"

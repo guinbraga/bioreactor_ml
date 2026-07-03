@@ -1,16 +1,17 @@
-from typing import Type
+from collections import defaultdict
 
 import matplotlib
-from matplotlib.figure import Figure
 import numpy as np
 import pandas as pd
 import shap
+from matplotlib.figure import Figure
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     classification_report,
     confusion_matrix,
 )
 
+from correlation_cluster_selector import CorrelationClusterSelector
 
 # so we don't have problems generating plots while running processes on all cores
 matplotlib.use("Agg")
@@ -47,7 +48,10 @@ class ResultsDataManager:
         self.coeff_results.append(coef_dict)
 
     def compute_and_record_shap(
-        self, pipeline: Pipeline, X_train: DataFrame, X_test: DataFrame, partition_tree
+        self,
+        pipeline: Pipeline,
+        X_train: DataFrame,
+        X_test: DataFrame,
     ) -> Explanation:
         """Computes the SHAP explanation, stores it in memory, and returns it."""
         preprocessing = pipeline[:-1]
@@ -61,6 +65,12 @@ class ResultsDataManager:
         X_test_df = pd.DataFrame(
             X_test_transformed, columns=feature_names, index=X_test.index
         )
+
+        cluster_selector = CorrelationClusterSelector(
+            threshold=0.95, linkage="complete", apply_clr=False
+        )
+        cluster_selector.fit(X_train_df)
+        partition_tree = cluster_selector.partition_tree_
 
         model = pipeline[-1]
         partition_mask = shap.maskers.Partition(
@@ -83,7 +93,11 @@ class ResultsDataManager:
         self.all_shap_explanations.append(explanation)
         return explanation
 
-    def record_classification_report(self) -> dict:
+    def compute_coalition_shap(self, clusters: Series):
+        pass
+
+
+    def create_classification_report(self) -> dict:
         results_df = pd.DataFrame(self.rows_result)
         y_true = results_df["True Class"].values
         y_pred = results_df["Predicted Class"].values
@@ -169,6 +183,10 @@ class ResultsPlotManager:
         )
         fig = plt.gcf()
         return fig
+
+    def generate_coalition_beeswarm_plot(self, coalition_shap: dict) -> Figure | None:
+        pass
+
 
     def generate_coef_plot(
         self, coeff_results: list[dict], n_samples: int = 15

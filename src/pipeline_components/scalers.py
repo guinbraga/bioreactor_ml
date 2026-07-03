@@ -35,7 +35,7 @@ def clr_transform(X: np.ndarray | DataFrame) -> np.ndarray | DataFrame:
 
 
 class CLRTransformer:
-    def create_scaler(self, trial: Trial | FixedTrial) -> TransformerMixin:
+    def create_scaler(self, trial: Trial | FixedTrial | None) -> TransformerMixin:
         return FunctionTransformer(clr_transform, feature_names_out='one-to-one')
 
 
