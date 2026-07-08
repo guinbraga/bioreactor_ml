@@ -96,7 +96,6 @@ class ResultsDataManager:
     def compute_coalition_shap(self, clusters: Series):
         pass
 
-
     def create_classification_report(self) -> dict:
         results_df = pd.DataFrame(self.rows_result)
         y_true = results_df["True Class"].values
@@ -106,22 +105,15 @@ class ResultsDataManager:
         return report  # type: ignore
 
     def get_feature_importances(self) -> Series:
-        is_linear_model = self.coeff_results
-        if is_linear_model:
-            coefficients_df = pd.DataFrame(self.coeff_results)
-            coefficients_df.set_index("Test Sample", inplace=True)
-            mean_coefficients = coefficients_df.abs().mean()
-            return mean_coefficients
-        else:
-            explanation_values = [
-                dict(zip(exp.feature_names, exp.values))
-                for exp in self.all_shap_explanations
-            ]
+        explanation_values = [
+            dict(zip(exp.feature_names, exp.values))
+            for exp in self.all_shap_explanations
+        ]
 
-            shap_df = pd.DataFrame(explanation_values)
-            shap_df.fillna(0, inplace=True)
-            mean_shap_values = shap_df.abs().mean()
-            return mean_shap_values
+        shap_df = pd.DataFrame(explanation_values)
+        shap_df.fillna(0, inplace=True)
+        mean_shap_values = shap_df.abs().mean()
+        return mean_shap_values
 
 
 class ResultsPlotManager:
@@ -184,9 +176,40 @@ class ResultsPlotManager:
         fig = plt.gcf()
         return fig
 
-    def generate_coalition_beeswarm_plot(self, coalition_shap: dict) -> Figure | None:
-        pass
+    def generate_cluster_importance_plot(
+        self,
+        feature_importances: Series | DataFrame,
+        clusters: dict | Series | None = None,
+        n_clusters: int = 20,
+    ) -> Figure | None:
+        # Select the top n_clusters importances by sorting descending
+        top_importances = feature_importances.sort_values(ascending=False).head(
+            n_clusters
+        )
+        # Sort ascending so that pandas barh plots the largest values at the top of the chart
+        top_importances_asc = top_importances.sort_values(ascending=True)
 
+        if clusters is not None:
+            if isinstance(clusters, dict):
+                clusters_series = Series(clusters)
+            else:
+                clusters_series = clusters
+
+            # Count occurrences of each cluster representative
+            counts = clusters_series.value_counts()
+
+            # Map index labels: append '(n)' representing the cluster size
+            new_index = [
+                f"{idx} ({counts.get(idx, 1)})" for idx in top_importances_asc.index
+            ]
+            top_importances_asc.index = new_index
+
+        fig, ax = plt.subplots(figsize=(10, 8))
+        top_importances_asc.plot.barh(
+            ax=ax,
+            title=f"{self.model_name} Importances for Top {n_clusters} Selected Clusters for predicting {self.target_col}",
+        )
+        return fig
 
     def generate_coef_plot(
         self, coeff_results: list[dict], n_samples: int = 15

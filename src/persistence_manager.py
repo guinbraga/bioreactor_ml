@@ -1,6 +1,7 @@
 import json
 from matplotlib.figure import Figure
 import pandas as pd
+from pandas import Series, DataFrame
 import os
 from sklearn.utils.parallel import joblib
 from correlation_cluster_selector import CorrelationClusterSelector
@@ -117,14 +118,14 @@ class DataPersistenceManager:
             f"{self.results_dir}/{self.model_name}_classification_report.tex"
         )
 
-    def save_top_feat_importances(self, top_features: list[str]) -> None:
+    def save_top_feat_importances(self, top_features: Series | DataFrame) -> None:
         with open(
             f"{self.results_dir}/{self.model_name}_top_features.csv",
             "w",
             encoding="utf-8",
         ) as features_file:
             features_file.write("feature,\n")
-            for feature in top_features:
+            for feature in top_features.index.to_list():
                 features_file.write(feature + ",\n")
 
 
@@ -153,6 +154,13 @@ class PlotPersistenceManager:
     def persist_coef_plot(self, fig: Figure) -> None:
         fig.savefig(
             f"{self.plot_dir}/{self.model_name}_coefficients_plot.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+
+    def persist_cluster_importance_plot(self, fig: Figure) -> None:
+        fig.savefig(
+            f"{self.plot_dir}/{self.model_name}_cluster_importance_Owen.png",
             dpi=300,
             bbox_inches="tight",
         )

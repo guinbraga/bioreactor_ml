@@ -154,7 +154,7 @@ print(dist_matrix_square.shape)
 ```python
 order = ['1T-1', '1T-2','3T-1', '3T-2']
 mds = MDS(n_components=2, metric='precomputed', random_state=42,
-          metric_mds=True, n_init=4, init='random')
+          metric_mds=False, n_init=4, init='random')
 nmds_results = mds.fit_transform(dist_matrix_square)
 
 metadata['NMDS1'] = nmds_results[:, 0]
@@ -163,7 +163,7 @@ import plotly.express as px
 fig = px.scatter(metadata, x='NMDS1', y='NMDS2', color='Gut Compartment',
                 symbol='TRANSFER', category_orders={'Gut Compartment': ['Midgut', 'Hindgut'],
                                                     'Category': order},
-                symbol_map=px_markers, title='nMDS of Microbial Distribution')
+                symbol_map=px_markers, title='nMDS of CLR-Transformed Microbial Distribution')
 fig.update_traces(marker={'size':14})
 fig.update_layout(width=1200, height=700)
 y_range = [metadata['NMDS2'].min()-0.1, metadata['NMDS2'].max()+0.1]

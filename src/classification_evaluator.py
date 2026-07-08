@@ -7,6 +7,7 @@ from sklearn.model_selection import BaseCrossValidator, LeaveOneGroupOut, LeaveO
 from correlation_cluster_selector import CorrelationClusterSelector
 from pipeline_optimizer import PipelineOptimizer
 from results_manager import ResultsDataManager, ResultsPlotManager
+from top_features_picker import TopFeaturesPicker
 
 
 class ClassificationEvaluator:
@@ -116,6 +117,12 @@ class ClassificationEvaluator:
         coefficients_plot = plot_manager.generate_coef_plot(
             results_data_manager.coeff_results, n_samples=15
         )
+        top_features = TopFeaturesPicker(cluster_selector.clusters).pick_top_features(
+            feature_importances
+        )
+        cluster_importances_plot = plot_manager.generate_cluster_importance_plot(
+            top_features, clusters=cluster_selector.clusters
+        )
         confusion_matrix = plot_manager.generate_confusion_matrix(
             results_data_manager.rows_result
         )
@@ -125,12 +132,14 @@ class ClassificationEvaluator:
                 "waterfall_plots": waterfall_plots,
                 "beeswarm_plot": beeswarm_plot,
                 "coefficients_plot": coefficients_plot,
+                "cluster_importances_plot": cluster_importances_plot,
                 "confusion_matrix": confusion_matrix,
             },
             "data_manager": results_data_manager,
             "classification_report": classification_report,
             "cluster_selector": cluster_selector,
             "feature_importances": feature_importances,
+            "top_features": top_features,
         }
 
         return results_payload

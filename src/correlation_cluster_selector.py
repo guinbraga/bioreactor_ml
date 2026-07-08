@@ -32,6 +32,15 @@ class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
         self.n_features_in_ = X.shape[1]
         self.feature_names_in_ = np.array(X.columns.to_list())
 
+        # when there's only one feature, we need to avoid running a 1x1 matrix on scipy's linkage
+        if self.n_features_in_ <= 1:
+            self.partition_tree_ = np.empty((0, 4))
+            self.clusters = pd.Series(X.columns.to_list(), index=X.columns)
+            self.clusters.index.name = "OTU"
+            self.clusters.name = "Cluster Medoid"
+            self.support_mask_ = np.array([True] * self.n_features_in_)
+            return self
+
         # 1. Define Clusters
         df_dist = self._compute_distance_matrix(X)
 
@@ -66,7 +75,10 @@ class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
         return pd.DataFrame(X_dist, columns=X.columns, index=X.columns)
 
     def _compute_medoids_and_mask(self, df_dist: DataFrame) -> np.ndarray:
-        """Flattens the hierarchical tree to flat clusters and extracts the medoids."""
+        """
+            Flattens the hierarchical tree to flat clusters and extracts the medoids.
+            Stores the cluster in a Series attribute.
+        """
         inverse_threshold = 1 - self.threshold
         cluster_ids = hierarchy.fcluster(
             self.partition_tree_, t=inverse_threshold, criterion="distance"
