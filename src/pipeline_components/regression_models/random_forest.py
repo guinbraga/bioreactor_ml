@@ -1,0 +1,18 @@
+from sklearn.ensemble import RandomForestRegressor
+from optuna.trial import Trial
+
+
+class RandomForestStrategy:
+    def create_model(self, trial: Trial) -> RandomForestRegressor:
+        max_depth = trial.suggest_int("rf_max_depth", 1, 3)
+        min_samples_leaf = trial.suggest_int("rf_min_samples_leaf", 1, 10)
+        min_samples_split = trial.suggest_int("rf_min_samples_split", 2, 10)
+
+        forest_regressor = RandomForestRegressor(
+            max_depth=max_depth,
+            min_samples_leaf=min_samples_leaf,
+            min_samples_split=min_samples_split,
+            random_state=47,
+        )
+
+        return forest_regressor

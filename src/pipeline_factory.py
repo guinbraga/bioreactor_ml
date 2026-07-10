@@ -2,14 +2,14 @@ from optuna.trial import FixedTrial, Trial
 from sklearn.model_selection import BaseCrossValidator, LeaveOneGroupOut, LeaveOneOut
 from sklearn.pipeline import Pipeline, make_pipeline
 
-from pipeline_components.models import (
+from pipeline_components.classification_models import (
     BaseModelStrategy,
     RandomForestStrategy,
 )
-from pipeline_components.models.elastic_net import ElasticNetStrategy
-from pipeline_components.models.l1_logreg import L1LogisticRegressionStrategy
-from pipeline_components.models.linear_svm import LinearSVMStrategy
-from pipeline_components.models.radial_svm import RadialSVMStrategy
+from pipeline_components.classification_models.elastic_net import ElasticNetStrategy
+from pipeline_components.classification_models.l1_logreg import L1LogisticRegressionStrategy
+from pipeline_components.classification_models.linear_svm import LinearSVMStrategy
+from pipeline_components.classification_models.radial_svm import RadialSVMStrategy
 from pipeline_components.scalers import (
     BaseScalerStrategy,
     BinarizerScaler,
