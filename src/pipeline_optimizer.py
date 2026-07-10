@@ -86,10 +86,11 @@ class PipelineOptimizer:
         selected_selectors: list[str],
         groups: Series | None = None,
         scoring: str | object = None,
+        direction: str = "maximize",
     ) -> tuple[Pipeline, Study]:  # returns both pipeline and study for record purposes
         sampler = optuna.samplers.TPESampler(seed=47)
         study = optuna.create_study(
-            direction="maximize",
+            direction=direction,
             sampler=sampler
         )  # might need to change direction depending on cv evaluation metric
         objective = Objective(

@@ -1,16 +1,15 @@
 from typing import Callable
-import numpy as np
+
 from pandas import DataFrame, Series
-from sklearn.metrics import log_loss
+from sklearn.metrics import root_mean_squared_error
 from sklearn.model_selection import BaseCrossValidator, LeaveOneGroupOut, LeaveOneOut
 
 from correlation_cluster_selector import CorrelationClusterSelector
 from pipeline_optimizer import PipelineOptimizer
 from results_manager import ResultsDataManager, ResultsPlotManager
-from top_features_picker import TopFeaturesPicker
 
 
-class ClassificationEvaluator:
+class RegressionEvaluator:
     def __init__(
         self,
         model_name: str,
@@ -73,29 +72,27 @@ class ClassificationEvaluator:
                 groups=groups_train,
                 selected_scaler_sequences=self.selected_scaler_sequences,
                 selected_selectors=self.selected_selectors,
+                scoring=root_mean_squared_error,
+                direction="minimize",
             )
 
             split = i + 1
             test_sample = X_test.index[0]
             y_true = y_test.iloc[0]
             predictions = pipeline.predict(X_test)
-            predictions_proba = pipeline.predict_proba(X_test)
-            classes = np.unique(y)
-            log_loss_score = log_loss(y_test, predictions_proba, labels=classes)
+            rmse = root_mean_squared_error(y_test, predictions)
             best_params_dict = study.best_params
 
             results_data_manager.record_split_metrics(
                 {
                     "Split": split,
                     "Test Sample": test_sample,
-                    "True Class": y_true,
-                    "Predicted Class": predictions[0],
-                    "Predicted Probabilities": predictions_proba[0].tolist(),
-                    "Log Loss Score": log_loss_score,
+                    "True Y": y_true,
+                    "Predicted Y": predictions[0],
+                    "Root Mean Squared Error": rmse,
                     "Best Pipeline Params": str(best_params_dict),
                 }
             )
-            results_data_manager.record_split_coefs(pipeline, test_sample)
 
             explanation = results_data_manager.compute_and_record_shap(
                 pipeline=pipeline,
@@ -109,7 +106,6 @@ class ClassificationEvaluator:
             )
             waterfall_plots[test_sample] = waterfall_plot
 
-        classification_report = results_data_manager.create_classification_report()
         feature_importances = results_data_manager.get_feature_importances()
 
         beeswarm_plot = plot_manager.generate_bee_swarm_plot(
@@ -118,14 +114,9 @@ class ClassificationEvaluator:
         coefficients_plot = plot_manager.generate_coef_plot(
             results_data_manager.coeff_results, n_samples=15
         )
-        top_features = TopFeaturesPicker(cluster_selector.clusters).pick_top_features(
-            feature_importances
-        )
+
         cluster_importances_plot = plot_manager.generate_cluster_importance_plot(
-            top_features, clusters=cluster_selector.clusters
-        )
-        confusion_matrix = plot_manager.generate_confusion_matrix(
-            results_data_manager.rows_result
+            feature_importances, clusters=cluster_selector.clusters
         )
 
         results_payload = {
@@ -134,13 +125,10 @@ class ClassificationEvaluator:
                 "beeswarm_plot": beeswarm_plot,
                 "coefficients_plot": coefficients_plot,
                 "cluster_importances_plot": cluster_importances_plot,
-                "confusion_matrix": confusion_matrix,
             },
             "data_manager": results_data_manager,
-            "classification_report": classification_report,
             "cluster_selector": cluster_selector,
             "feature_importances": feature_importances,
-            "top_features": top_features,
         }
 
         return results_payload
