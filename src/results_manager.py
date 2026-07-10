@@ -52,6 +52,7 @@ class ResultsDataManager:
         pipeline: Pipeline,
         X_train: DataFrame,
         X_test: DataFrame,
+        cluster_selector: CorrelationClusterSelector,
     ) -> Explanation:
         """Computes the SHAP explanation, stores it in memory, and returns it."""
         preprocessing = pipeline[:-1]
@@ -66,10 +67,6 @@ class ResultsDataManager:
             X_test_transformed, columns=feature_names, index=X_test.index
         )
 
-        cluster_selector = CorrelationClusterSelector(
-            threshold=0.95, linkage="complete", apply_clr=False
-        )
-        cluster_selector.fit(X_train_df)
         partition_tree = cluster_selector.partition_tree_
 
         model = pipeline[-1]
