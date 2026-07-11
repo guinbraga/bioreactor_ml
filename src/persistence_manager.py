@@ -16,9 +16,10 @@ class DataPersistenceManager:
         results_data_manager: ResultsDataManager,
         results_dir: str,
         model_name: str,
+        target_column: str,
     ) -> None:
         self.results_data_manager = results_data_manager
-        self.results_dir = results_dir
+        self.results_dir = f"{results_dir}/"
         self.model_name = model_name
 
         os.makedirs(self.results_dir, exist_ok=True)

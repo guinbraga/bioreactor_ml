@@ -13,11 +13,12 @@ console = Console()
 genomic_file_path = questionary.path("Specify path to genomic data:").ask()
 metadata_file_path = questionary.path("Specify path to experiment metadata:").ask()
 available_columns = fetch_metadata_columns(metadata_file_path)
-target_column = questionary.select(
-    "Select target column to be predicted from metadata file:",
+target_columns = questionary.checkbox(
+    "Select target columns to be predicted from metadata file:",
     choices=available_columns,
 ).ask()
-available_columns.remove(target_column)
+for column in target_columns:
+    available_columns.remove(column)
 metadata_file_index = questionary.select(
     "Select index column from metadata file:", choices=available_columns
 ).ask()
@@ -28,7 +29,7 @@ console.print("[yellow]Validating and merging datasets...[/yellow]")
 merge_results, data_manager = setup_data(
     genomic_file_path=genomic_file_path,
     metadata_file_path=metadata_file_path,
-    target_column=target_column,
+    target_columns=target_columns,
     metadata_file_index=metadata_file_index,
 )
 
@@ -125,13 +126,14 @@ def on_complete(model_name: str):
     status_spinner.stop()
     console.print(f"[green]Finished Evaluation for {model_name}![/green]")
 
-
-evaluate_experiment(
-    data_manager=data_manager,
-    selected_models=models_to_evaluate,
-    results_dir=results_dir,
-    on_model_begin=on_model_begin,
-    on_split_begin=on_split_begin,
-    on_complete=on_complete,
-    on_persist=on_persist,
-)
+for target_column in target_columns:
+    evaluate_experiment(
+        data_manager=data_manager,
+        target_column=target_column,
+        selected_models=models_to_evaluate,
+        results_dir=results_dir,
+        on_model_begin=on_model_begin,
+        on_split_begin=on_split_begin,
+        on_complete=on_complete,
+        on_persist=on_persist,
+    )

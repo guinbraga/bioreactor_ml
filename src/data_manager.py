@@ -10,12 +10,12 @@ class DataManager:
         genomic_file_path: Path | str,
         metadata_file_path: Path | str,
         metadata_file_index: str,
-        target_column: str,
+        target_columns: list[str],
     ):
         self.genomic_file_path: Path | str = genomic_file_path
         self.metadata_file_path: Path | str = metadata_file_path
         self.merged_df: DataFrame | None = None
-        self.target_column: str = target_column
+        self.target_columns: list[str] = target_columns
         self.metadata_file_index: str = metadata_file_index
 
     @staticmethod
@@ -37,7 +37,7 @@ class DataManager:
         genomic_df = pd.read_csv(self.genomic_file_path, index_col=0).T
         metadata_df = pd.read_csv(
             self.metadata_file_path, index_col=self.metadata_file_index
-        )[self.target_column]
+        )[self.target_columns]
 
         merged_df = pd.merge(
             genomic_df, metadata_df, how="inner", right_index=True, left_index=True
@@ -60,15 +60,14 @@ class DataManager:
 
         return merge_results
 
-    def get_X_y(self) -> tuple[DataFrame, Series]:
+    def get_X_y(self, target_column) -> tuple[DataFrame, Series]:
         if self.merged_df is None:
             raise RuntimeError(
                 "Data has not been loaded yet. Use load_data() before get_X_y"
             )
 
         merged_df = self.merged_df
-        target_column = self.target_column
-        X = merged_df.drop(target_column, axis="columns")
+        X = merged_df.drop(self.target_columns, axis="columns")
         y = merged_df[target_column]
 
         if type(y) is not Series:

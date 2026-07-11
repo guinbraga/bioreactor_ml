@@ -54,29 +54,25 @@ class ResultsDataManager:
         X_test: DataFrame,
         cluster_selector: CorrelationClusterSelector,
     ) -> Explanation:
-        """Computes the SHAP explanation, stores it in memory, and returns it."""
-        preprocessing = pipeline[:-1]
-        feature_names = preprocessing.get_feature_names_out()
-        X_transformed = preprocessing.transform(X_train)
-        X_test_transformed = preprocessing.transform(X_test)
+        """Computes the Owen explanation, stores it in memory, and returns it.
 
-        X_train_df = pd.DataFrame(
-            X_transformed, columns=feature_names, index=X_train.index
-        )
-        X_test_df = pd.DataFrame(
-            X_test_transformed, columns=feature_names, index=X_test.index
+        """
+
+        model = pipeline[-1]
+        predict_function = (
+            pipeline.predict_proba
+            if hasattr(model, "predict_proba")
+            else pipeline.predict
         )
 
         partition_tree = cluster_selector.partition_tree_
 
-        model = pipeline[-1]
-        partition_mask = shap.maskers.Partition(
-            X_train_df.to_numpy(), clustering=partition_tree
-        )
+        partition_mask = shap.maskers.Partition(X_train, clustering=partition_tree)
         explainer = shap.PartitionExplainer(
-            model.predict_proba, partition_mask, partition_tree=partition_tree
+            predict_function, partition_mask, partition_tree=partition_tree
         )
-        shap_values = explainer(X_test_df)
+
+        shap_values = explainer(X_test)
 
         # different Explainer objects return different-shaped objects
         if isinstance(shap_values, list):

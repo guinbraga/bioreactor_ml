@@ -42,7 +42,7 @@ class ClassificationEvaluator:
         cluster_selector.fit(X)
 
         cv = self.cv
-        splits = cv.split(x, y, groups=self.groups)
+        splits = cv.split(X, y, groups=self.groups)
         waterfall_plots = {}
 
         for i, (train_index, test_index) in enumerate(splits):

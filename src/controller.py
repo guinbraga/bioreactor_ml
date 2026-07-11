@@ -36,13 +36,13 @@ def fetch_pipeline_components() -> dict[str, list[str]]:
 def setup_data(
     genomic_file_path: Path | str,
     metadata_file_path: Path | str,
-    target_column: str,
+    target_columns: list[str],
     metadata_file_index: str,
 ) -> tuple[dict, DataManager]:
     data_manager = DataManager(
         genomic_file_path=genomic_file_path,
         metadata_file_path=metadata_file_path,
-        target_column=target_column,
+        target_columns=target_columns,
         metadata_file_index=metadata_file_index,
     )
     merge_results = data_manager.merge_datasets()
@@ -54,6 +54,7 @@ def setup_data(
 
 def evaluate_experiment(
     data_manager: DataManager,
+    target_column: str,
     selected_models: dict[str, ModelConfig],
     results_dir: str,
     on_complete: Callable | None = None,
@@ -62,7 +63,7 @@ def evaluate_experiment(
     on_persist: Callable | None = None,
     persist_to_disk: bool = True,
 ):
-    X, y = data_manager.get_X_y()
+    X, y = data_manager.get_X_y(target_column)
     pipeline_factory = PipelineFactory()
 
     for model_name, model_config in selected_models.items():
@@ -84,12 +85,13 @@ def evaluate_experiment(
         if persist_to_disk:
             if on_persist:
                 on_persist(model_name)
-            model_results_dir = f"{results_dir}/{model_name}"
+            model_results_dir = f"{results_dir}/{target_column}/{model_name}"
 
             data_persister = DataPersistenceManager(
                 results_data_manager=results_payload["data_manager"],
                 results_dir=model_results_dir,
                 model_name=model_name,
+                target_column=target_column,
             )
             data_persister.save_final_csv()
             data_persister.save_clusters(results_payload["cluster_selector"])
