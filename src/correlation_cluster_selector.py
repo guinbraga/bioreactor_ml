@@ -76,8 +76,8 @@ class CorrelationClusterSelector(BaseEstimator, SelectorMixin):
 
     def _compute_medoids_and_mask(self, df_dist: DataFrame) -> np.ndarray:
         """
-            Flattens the hierarchical tree to flat clusters and extracts the medoids.
-            Stores the cluster in a Series attribute.
+        Flattens the hierarchical tree to flat clusters and extracts the medoids.
+        Stores the cluster in a Series attribute.
         """
         inverse_threshold = 1 - self.threshold
         cluster_ids = hierarchy.fcluster(

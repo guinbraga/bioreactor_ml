@@ -119,15 +119,45 @@ class DataPersistenceManager:
             f"{self.results_dir}/{self.model_name}_classification_report.tex"
         )
 
-    def save_top_feat_importances(self, top_features: Series | DataFrame) -> None:
+    def save_top_feat_importances(
+        self,
+        top_features: Series | DataFrame,
+        cluster_selector: CorrelationClusterSelector | None = None,
+    ) -> None:
+        cluster_reprs = top_features.index.to_list()
+
         with open(
-            f"{self.results_dir}/{self.model_name}_top_features.csv",
+            f"{self.results_dir}/{self.model_name}_top_clusters.csv",
             "w",
             encoding="utf-8",
         ) as features_file:
             features_file.write("feature,\n")
-            for feature in top_features.index.to_list():
+            for feature in cluster_reprs:
                 features_file.write(feature + ",\n")
+
+        if cluster_selector is not None:
+            clusters = cluster_selector.clusters
+            expanded = []
+            for rep in cluster_reprs:
+                members = clusters[clusters == rep].index
+                expanded.extend(members)
+            with open(
+                f"{self.results_dir}/{self.model_name}_top_features.csv",
+                "w",
+                encoding="utf-8",
+            ) as features_file:
+                features_file.write("feature,\n")
+                for feature in expanded:
+                    features_file.write(feature + ",\n")
+        else:
+            with open(
+                f"{self.results_dir}/{self.model_name}_top_features.csv",
+                "w",
+                encoding="utf-8",
+            ) as features_file:
+                features_file.write("feature,\n")
+                for feature in cluster_reprs:
+                    features_file.write(feature + ",\n")
 
 
 class PlotPersistenceManager:
@@ -169,6 +199,13 @@ class PlotPersistenceManager:
     def persist_confusion_matrix(self, fig: Figure) -> None:
         fig.savefig(
             f"{self.plot_dir}/{self.model_name}_confusion_matrix.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+
+    def persist_rmse_boxplot(self, fig: Figure) -> None:
+        fig.savefig(
+            f"{self.plot_dir}/{self.model_name}_rmse_boxplot.png",
             dpi=300,
             bbox_inches="tight",
         )

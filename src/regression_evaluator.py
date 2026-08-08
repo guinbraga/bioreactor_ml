@@ -1,5 +1,5 @@
 from typing import Callable
-
+import numpy as np
 from pandas import DataFrame, Series
 from sklearn.metrics import root_mean_squared_error
 from sklearn.model_selection import BaseCrossValidator, LeaveOneGroupOut, LeaveOneOut
@@ -7,6 +7,7 @@ from sklearn.model_selection import BaseCrossValidator, LeaveOneGroupOut, LeaveO
 from correlation_cluster_selector import CorrelationClusterSelector
 from pipeline_optimizer import PipelineOptimizer
 from results_manager import ResultsDataManager, ResultsPlotManager
+from top_features_picker import TopFeaturesPicker
 
 
 class RegressionEvaluator:
@@ -33,7 +34,7 @@ class RegressionEvaluator:
     def evaluate(self, X: DataFrame, y: Series) -> dict:
         target_col = str(y.name)
 
-        results_data_manager = ResultsDataManager(self.model_name)
+        results_data_manager = ResultsDataManager(target_col)
         plot_manager = ResultsPlotManager(self.model_name, target_col=target_col)
         cluster_selector = CorrelationClusterSelector(
             threshold=0.95, linkage="complete"
@@ -41,7 +42,7 @@ class RegressionEvaluator:
         cluster_selector.fit(X)
 
         cv = self.cv
-        splits = cv.split(x, y, groups=self.groups)
+        splits = cv.split(X, y, groups=self.groups)
         waterfall_plots = {}
 
         for i, (train_index, test_index) in enumerate(splits):
@@ -73,7 +74,7 @@ class RegressionEvaluator:
                 selected_scaler_sequences=self.selected_scaler_sequences,
                 selected_selectors=self.selected_selectors,
                 scoring=root_mean_squared_error,
-                direction="minimize",
+                direction="maximize",
             )
 
             split = i + 1
@@ -108,6 +109,11 @@ class RegressionEvaluator:
 
         feature_importances = results_data_manager.get_feature_importances()
 
+        rmse_values = [
+            row["Root Mean Squared Error"] for row in results_data_manager.rows_result
+        ]
+        rmse_boxplot = plot_manager.generate_rmse_boxplot(rmse_values)
+
         beeswarm_plot = plot_manager.generate_bee_swarm_plot(
             results_data_manager.all_shap_explanations
         )
@@ -115,8 +121,11 @@ class RegressionEvaluator:
             results_data_manager.coeff_results, n_samples=15
         )
 
+        top_features = TopFeaturesPicker(cluster_selector.clusters).pick_top_features(
+            feature_importances
+        )
         cluster_importances_plot = plot_manager.generate_cluster_importance_plot(
-            feature_importances, clusters=cluster_selector.clusters
+            top_features, clusters=cluster_selector.clusters
         )
 
         results_payload = {
@@ -125,10 +134,12 @@ class RegressionEvaluator:
                 "beeswarm_plot": beeswarm_plot,
                 "coefficients_plot": coefficients_plot,
                 "cluster_importances_plot": cluster_importances_plot,
+                "rmse_boxplot": rmse_boxplot,
             },
             "data_manager": results_data_manager,
             "cluster_selector": cluster_selector,
             "feature_importances": feature_importances,
+            "top_features": top_features,
         }
 
         return results_payload

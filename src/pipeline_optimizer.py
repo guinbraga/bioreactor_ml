@@ -47,16 +47,19 @@ class Objective:
             self.selected_selectors,
         )
 
-        classes = np.unique(
-            self.y_train
-        )  # needed for log_loss with only one value, as in LOO
-
-        custom_scorer = make_scorer(
-            log_loss,
-            greater_is_better=False,
-            response_method="predict_proba",
-            labels=classes,
-        )
+        if self.scoring is not None:
+            custom_scorer = make_scorer(
+                self.scoring,
+                greater_is_better=False,
+            )
+        else:
+            classes = np.unique(self.y_train)
+            custom_scorer = make_scorer(
+                log_loss,
+                greater_is_better=False,
+                response_method="predict_proba",
+                labels=classes,
+            )
 
         scores = cross_val_score(
             pipeline,

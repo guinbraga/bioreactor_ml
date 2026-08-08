@@ -235,3 +235,16 @@ class ResultsPlotManager:
         plt.title(f"{self.model_name} Confusion Matrix for {self.target_col}")
 
         return fig
+
+    def generate_rmse_boxplot(self, rmse_values: list[float]) -> Figure:
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.boxplot(rmse_values, vert=True, patch_artist=True)
+        ax.set_xticklabels([self.model_name])
+        ax.set_ylabel("RMSE")
+        ax.set_title(f"RMSE Distribution for {self.model_name} predicting {self.target_col}")
+
+        mean_val = np.mean(rmse_values)
+        ax.axhline(y=mean_val, color="r", linestyle="--", alpha=0.7, label=f"Mean: {mean_val:.4f}")
+        ax.legend()
+
+        return fig

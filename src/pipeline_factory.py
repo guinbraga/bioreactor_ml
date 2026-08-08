@@ -6,10 +6,12 @@ from pipeline_components.classification_models import (
     BaseModelStrategy,
     RandomForestStrategy,
 )
-from pipeline_components.classification_models.elastic_net import ElasticNetStrategy
+from pipeline_components.classification_models.elastic_net import ElasticNetStrategy as ClsElasticNetStrategy
 from pipeline_components.classification_models.l1_logreg import L1LogisticRegressionStrategy
 from pipeline_components.classification_models.linear_svm import LinearSVMStrategy
 from pipeline_components.classification_models.radial_svm import RadialSVMStrategy
+from pipeline_components.regression_models.elastic_net import ElasticNetStrategy as RegElasticNetStrategy
+from pipeline_components.regression_models.random_forest import RandomForestStrategy as RegRandomForestStrategy
 from pipeline_components.scalers import (
     BaseScalerStrategy,
     BinarizerScaler,
@@ -30,9 +32,11 @@ class PipelineFactory:
         self.model_registry: dict[str, BaseModelStrategy] = {
             "Random Forest": RandomForestStrategy(),
             "L1 Logistic Regression": L1LogisticRegressionStrategy(),
-            "Elastic Net": ElasticNetStrategy(),
+            "Elastic Net": ClsElasticNetStrategy(),
             "SVM-linear": LinearSVMStrategy(),
             "SVM-radial": RadialSVMStrategy(),
+            "Random Forest Regressor": RegRandomForestStrategy(),
+            "Elastic Net Regressor": RegElasticNetStrategy(),
         }
 
         self.scaler_registry: dict[str, BaseScalerStrategy] = {
@@ -81,7 +85,8 @@ class PipelineFactory:
             instantiated_scalers.append(scaler_strategy.create_scaler(trial))
 
         selector_strategy = self.selector_registry[chosen_selector]
-        selector = selector_strategy.create_selector(trial)
+        is_regression = "Regressor" in model_name
+        selector = selector_strategy.create_selector(trial, is_regression=is_regression)
 
         estimator_strategy = self.model_registry[model_name]
         estimator = estimator_strategy.create_model(trial)
