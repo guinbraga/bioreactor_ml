@@ -5,3 +5,4 @@ src/__pycache__
 test*
 text/
 src/frontend.py
+.omo*
