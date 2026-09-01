@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Any
 
 import matplotlib
 import numpy as np
@@ -12,6 +13,11 @@ from sklearn.metrics import (
 )
 
 from correlation_cluster_selector import CorrelationClusterSelector
+
+# Sentinel label used when the model has no `classes_` attribute (regression /
+# single-output pipelines). Explanations for those pipelines are produced under
+# this key so that all the per-class code paths work uniformly.
+REGRESSION_CLASS_LABEL = "regression"
 
 # so we don't have problems generating plots while running processes on all cores
 matplotlib.use("Agg")
@@ -29,6 +35,8 @@ class ResultsDataManager:
         self.rows_result: list[dict] = []
         self.coeff_results: list[dict] = []
         self.all_shap_explanations: list[Explanation] = []
+        self.shap_classes: list[Any] = []
+        self.shap_explanations_by_class: dict[Any, list[Explanation]] = defaultdict(list)
 
     def record_split_metrics(self, split_data: dict) -> None:
         self.rows_result.append(split_data)
@@ -53,9 +61,15 @@ class ResultsDataManager:
         X_train: DataFrame,
         X_test: DataFrame,
         cluster_selector: CorrelationClusterSelector,
-    ) -> Explanation:
-        """Computes the Owen explanation, stores it in memory, and returns it.
+    ) -> dict[Any, Explanation]:
+        """Computes the Owen explanation for every output class of the fitted
+        pipeline, stores them in memory (per-class and flat), and returns a
+        mapping ``{class_label -> Explanation}`` for this split's test sample.
 
+        ``class_label`` is read from the estimator's ``classes_`` attribute
+        (per-fold), not from the global ``np.unique(y)``, so the label is
+        always the one the SHAP column actually refers to -- this eliminates
+        the drift that occurs when a fold's training set omits a class.
         """
 
         model = pipeline[-1]
@@ -74,17 +88,30 @@ class ResultsDataManager:
 
         shap_values = explainer(X_test)
 
-        # different Explainer objects return different-shaped objects
-        if isinstance(shap_values, list):
-            explanation = shap_values[1][0]
+        if hasattr(model, "classes_"):
+            class_labels = list(model.classes_)
         else:
-            if len(shap_values.shape) == 3:
-                explanation = shap_values[0, :, 1]
-            else:
-                explanation = shap_values[0]
+            class_labels = [REGRESSION_CLASS_LABEL]
 
-        self.all_shap_explanations.append(explanation)
-        return explanation
+        per_class_explanations: dict[Any, Explanation] = {}
+
+        if isinstance(shap_values, list):
+            n_outputs = min(len(shap_values), len(class_labels))
+            for k in range(n_outputs):
+                per_class_explanations[class_labels[k]] = shap_values[k][0]
+        elif len(shap_values.shape) == 3:
+            n_outputs = min(shap_values.shape[-1], len(class_labels))
+            for k in range(n_outputs):
+                per_class_explanations[class_labels[k]] = shap_values[0, :, k]
+        else:
+            per_class_explanations[class_labels[0]] = shap_values[0]
+
+        for label, explanation in per_class_explanations.items():
+            self.all_shap_explanations.append(explanation)
+            self.shap_classes.append(label)
+            self.shap_explanations_by_class[label].append(explanation)
+
+        return per_class_explanations
 
     def compute_coalition_shap(self, clusters: Series):
         pass
@@ -97,16 +124,22 @@ class ResultsDataManager:
         report = classification_report(y_true, y_pred, labels=labels, output_dict=True)
         return report  # type: ignore
 
-    def get_feature_importances(self) -> Series:
-        explanation_values = [
-            dict(zip(exp.feature_names, exp.values))
-            for exp in self.all_shap_explanations
-        ]
+    def get_feature_importances(self) -> dict[Any, Series]:
+        return {
+            class_label: self._mean_abs_shap(explanations)
+            for class_label, explanations in self.shap_explanations_by_class.items()
+        }
 
+    @staticmethod
+    def _mean_abs_shap(explanations: list[Explanation]) -> Series:
+        if not explanations:
+            return Series(dtype=float)
+        explanation_values = [
+            dict(zip(exp.feature_names, exp.values)) for exp in explanations
+        ]
         shap_df = pd.DataFrame(explanation_values)
         shap_df.fillna(0, inplace=True)
-        mean_shap_values = shap_df.abs().mean()
-        return mean_shap_values
+        return shap_df.abs().mean()
 
 
 class ResultsPlotManager:
@@ -117,23 +150,28 @@ class ResultsPlotManager:
         self.target_col = target_col
 
     def generate_shap_waterfall(
-        self, explanation: Explanation, sample_id: str
+        self, explanation: Explanation, sample_id: str, class_name: str
     ) -> Figure:
         plt.figure(figsize=(10, 8))
         shap.plots.waterfall(explanation, show=False, max_display=15)
         plt.title(
-            f"{self.model_name} - Feature Importances for {sample_id} Prediction of {self.target_col}"
+            f"{self.model_name} - Feature Importances for {sample_id} Prediction of {self.target_col} as {class_name}"
         )
         fig = plt.gcf()
         return fig
 
     def generate_bee_swarm_plot(
-        self, all_shap_explanations: list[Explanation]
+        self,
+        all_shap_explanations: list[Explanation],
+        class_name: str,
     ) -> Figure | None:
         """
         Genearates a Beeswarm plot at the end of the experiment. As we are dealing
         with Leave One Out or Leave One Group Out, SHAP values are stacked from
         all splits, and base values are the average of all base values.
+
+        Explanations passed in must belong to a single class; the caller is
+        responsible for grouping `ResultsDataManager.shap_explanations_by_class`.
         """
         if not all_shap_explanations:
             return
@@ -151,7 +189,7 @@ class ResultsPlotManager:
         df_values = pd.DataFrame(explanation_values)
         df_values.fillna(0, inplace=True)
         df_data = pd.DataFrame(explanation_data)
-        df_data = df_data[df_values.columns]
+        df_data = df_data[df_values.columns] # make sure both dfs are aligned
         feature_names = df_values.columns.to_list()
 
         global_explanation = Explanation(
@@ -164,7 +202,7 @@ class ResultsPlotManager:
         plt.figure(figsize=(10, 8))
         shap.plots.beeswarm(global_explanation, show=False, max_display=15)
         plt.title(
-            f"{self.model_name} Global Beeswarm plot for predicting {self.target_col}"
+            f"{self.model_name} Global Beeswarm plot for predicting {self.target_col} as {class_name}"
         )
         fig = plt.gcf()
         return fig
@@ -172,6 +210,7 @@ class ResultsPlotManager:
     def generate_cluster_importance_plot(
         self,
         feature_importances: Series | DataFrame,
+        class_name: str,
         clusters: dict | Series | None = None,
         n_clusters: int = 20,
     ) -> Figure | None:
@@ -200,7 +239,7 @@ class ResultsPlotManager:
         fig, ax = plt.subplots(figsize=(10, 8))
         top_importances_asc.plot.barh(
             ax=ax,
-            title=f"{self.model_name} Importances for Top {n_clusters} Selected Clusters for predicting {self.target_col}",
+            title=f"{self.model_name} Importances for Top {n_clusters} Selected Clusters for predicting {self.target_col} as {class_name}",
         )
         return fig
 
@@ -241,10 +280,18 @@ class ResultsPlotManager:
         ax.boxplot(rmse_values, vert=True, patch_artist=True)
         ax.set_xticklabels([self.model_name])
         ax.set_ylabel("RMSE")
-        ax.set_title(f"RMSE Distribution for {self.model_name} predicting {self.target_col}")
+        ax.set_title(
+            f"RMSE Distribution for {self.model_name} predicting {self.target_col}"
+        )
 
         mean_val = np.mean(rmse_values)
-        ax.axhline(y=mean_val, color="r", linestyle="--", alpha=0.7, label=f"Mean: {mean_val:.4f}")
+        ax.axhline(
+            y=mean_val,
+            color="r",
+            linestyle="--",
+            alpha=0.7,
+            label=f"Mean: {mean_val:.4f}",
+        )
         ax.legend()
 
         return fig

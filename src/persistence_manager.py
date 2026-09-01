@@ -60,13 +60,13 @@ class DataPersistenceManager:
         if not self.results_data_manager.all_shap_explanations:
             return
 
+        rdm = self.results_data_manager
         exp_values = [
             dict(zip(exp.feature_names, exp.values))
-            for exp in self.results_data_manager.all_shap_explanations
+            for exp in rdm.all_shap_explanations
         ]
         exp_data = [
-            dict(zip(exp.feature_names, exp.data))
-            for exp in self.results_data_manager.all_shap_explanations
+            dict(zip(exp.feature_names, exp.data)) for exp in rdm.all_shap_explanations
         ]
         df_values = pd.DataFrame(exp_values)
         df_values.fillna(0, inplace=True)
@@ -83,6 +83,7 @@ class DataPersistenceManager:
         df_raw = pd.DataFrame(df_data.values, columns=raw_cols)
 
         all_df = pd.concat([df_shap, df_raw], axis=1)
+        all_df.insert(0, "Class", list(rdm.shap_classes))
         file_path = f"{self.results_dir}/shap_explanations_table.parquet"
         all_df.to_parquet(file_path, index=False)
 
@@ -122,12 +123,13 @@ class DataPersistenceManager:
     def save_top_feat_importances(
         self,
         top_features: Series | DataFrame,
+        class_label,
         cluster_selector: CorrelationClusterSelector | None = None,
     ) -> None:
         cluster_reprs = top_features.index.to_list()
 
         with open(
-            f"{self.results_dir}/{self.model_name}_top_clusters.csv",
+            f"{self.results_dir}/{self.model_name}_top_clusters_{class_label}.csv",
             "w",
             encoding="utf-8",
         ) as features_file:
@@ -142,7 +144,7 @@ class DataPersistenceManager:
                 members = clusters[clusters == rep].index
                 expanded.extend(members)
             with open(
-                f"{self.results_dir}/{self.model_name}_top_features.csv",
+                f"{self.results_dir}/{self.model_name}_top_features_{class_label}.csv",
                 "w",
                 encoding="utf-8",
             ) as features_file:
@@ -151,7 +153,7 @@ class DataPersistenceManager:
                     features_file.write(feature + ",\n")
         else:
             with open(
-                f"{self.results_dir}/{self.model_name}_top_features.csv",
+                f"{self.results_dir}/{self.model_name}_top_features_{class_label}.csv",
                 "w",
                 encoding="utf-8",
             ) as features_file:
@@ -168,16 +170,16 @@ class PlotPersistenceManager:
         os.makedirs(self.plot_dir, exist_ok=True)
         pass
 
-    def persist_shap_waterfall(self, fig: Figure, sample_id: str) -> None:
+    def persist_shap_waterfall(self, fig: Figure, sample_id: str, class_label) -> None:
         fig.savefig(
-            f"{self.plot_dir}/{self.model_name}_waterfall_{sample_id}.png",
+            f"{self.plot_dir}/{self.model_name}_waterfall_{sample_id}_{class_label}.png",
             dpi=300,
             bbox_inches="tight",
         )
 
-    def persist_beeswarm_plot(self, fig: Figure) -> None:
+    def persist_beeswarm_plot(self, fig: Figure, class_label) -> None:
         fig.savefig(
-            f"{self.plot_dir}/{self.model_name}_beeswarm.png",
+            f"{self.plot_dir}/{self.model_name}_beeswarm_{class_label}.png",
             dpi=300,
             bbox_inches="tight",
         )
@@ -189,9 +191,9 @@ class PlotPersistenceManager:
             bbox_inches="tight",
         )
 
-    def persist_cluster_importance_plot(self, fig: Figure) -> None:
+    def persist_cluster_importance_plot(self, fig: Figure, class_label) -> None:
         fig.savefig(
-            f"{self.plot_dir}/{self.model_name}_cluster_importance_Owen.png",
+            f"{self.plot_dir}/{self.model_name}_cluster_importance_Owen_{class_label}.png",
             dpi=300,
             bbox_inches="tight",
         )

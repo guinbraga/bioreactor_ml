@@ -606,7 +606,9 @@ elif page == "🔬 Detailed Model Explorer":
 
                 with col_b:
                     beeswarm_path = (
-                        run_dir / "plots" / f"{run_row['regressor']}_beeswarm.png"
+                        run_dir
+                        / "plots"
+                        / f"{run_row['regressor']}_beeswarm_regression.png"
                     )
                     if beeswarm_path.exists():
                         st.markdown(
@@ -621,7 +623,7 @@ elif page == "🔬 Detailed Model Explorer":
                     ci_path = (
                         run_dir
                         / "plots"
-                        / f"{run_row['regressor']}_cluster_importance_Owen.png"
+                        / f"{run_row['regressor']}_cluster_importance_Owen_regression.png"
                     )
                     if ci_path.exists():
                         st.markdown(
@@ -656,7 +658,7 @@ elif page == "🔬 Detailed Model Explorer":
                 waterfall_path = (
                     run_dir
                     / "plots"
-                    / f"{run_row['regressor']}_waterfall_{sample_id}.png"
+                    / f"{run_row['regressor']}_waterfall_{sample_id}_regression.png"
                 )
                 if waterfall_path.exists():
                     st.image(str(waterfall_path), use_container_width=True)

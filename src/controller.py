@@ -98,10 +98,12 @@ def evaluate_experiment(
             data_persister.save_shap_dataframes()
             data_persister.save_shap_objects()
             data_persister.save_classification_report()
-            data_persister.save_top_feat_importances(
-                results_payload["top_features"],
-                results_payload.get("cluster_selector"),
-            )
+            for class_label, top_features in results_payload["top_features"].items():
+                data_persister.save_top_feat_importances(
+                    top_features,
+                    class_label,
+                    results_payload.get("cluster_selector"),
+                )
             data_persister.save_experiment_setup(
                 selected_scaler_sequences=model_config["selected_scaler_sequences"],
                 selected_selectors=model_config["selected_selectors"],
@@ -112,24 +114,27 @@ def evaluate_experiment(
 
             plots_persister = PlotPersistenceManager(model_results_dir, model_name)
             plots = results_payload["plots"]
-            for sample_id, fig in plots["waterfall_plots"].items():
-                if fig:
-                    plots_persister.persist_shap_waterfall(fig, sample_id)
-                    plt.close(fig)
+            for class_label, sample_figs in plots["waterfall_plots"].items():
+                for sample_id, fig in sample_figs.items():
+                    if fig:
+                        plots_persister.persist_shap_waterfall(
+                            fig, sample_id, class_label
+                        )
+                        plt.close(fig)
 
-            if plots["beeswarm_plot"]:
-                plots_persister.persist_beeswarm_plot(plots["beeswarm_plot"])
-                plt.close(plots["beeswarm_plot"])
+            for class_label, fig in plots["beeswarm_plots"].items():
+                if fig:
+                    plots_persister.persist_beeswarm_plot(fig, class_label)
+                    plt.close(fig)
 
             if plots["confusion_matrix"]:
                 plots_persister.persist_confusion_matrix(plots["confusion_matrix"])
                 plt.close(plots["confusion_matrix"])
 
-            if plots["cluster_importances_plot"]:
-                plots_persister.persist_cluster_importance_plot(
-                    plots["cluster_importances_plot"]
-                )
-                plt.close(plots["cluster_importances_plot"])
+            for class_label, fig in plots["cluster_importances_plots"].items():
+                if fig:
+                    plots_persister.persist_cluster_importance_plot(fig, class_label)
+                    plt.close(fig)
 
         if on_complete:
             on_complete(model_name)
@@ -187,10 +192,12 @@ def evaluate_experiment_regression(
             data_persister.save_clusters(results_payload["cluster_selector"])
             data_persister.save_shap_dataframes()
             data_persister.save_shap_objects()
-            data_persister.save_top_feat_importances(
-                results_payload["top_features"],
-                results_payload.get("cluster_selector"),
-            )
+            for class_label, top_features in results_payload["top_features"].items():
+                data_persister.save_top_feat_importances(
+                    top_features,
+                    class_label,
+                    results_payload.get("cluster_selector"),
+                )
             data_persister.save_experiment_setup(
                 selected_scaler_sequences=model_config["selected_scaler_sequences"],
                 selected_selectors=model_config["selected_selectors"],
@@ -201,24 +208,27 @@ def evaluate_experiment_regression(
 
             plots_persister = PlotPersistenceManager(model_results_dir, model_name)
             plots = results_payload["plots"]
-            for sample_id, fig in plots["waterfall_plots"].items():
-                if fig:
-                    plots_persister.persist_shap_waterfall(fig, sample_id)
-                    plt.close(fig)
+            for class_label, sample_figs in plots["waterfall_plots"].items():
+                for sample_id, fig in sample_figs.items():
+                    if fig:
+                        plots_persister.persist_shap_waterfall(
+                            fig, sample_id, class_label
+                        )
+                        plt.close(fig)
 
-            if plots["beeswarm_plot"]:
-                plots_persister.persist_beeswarm_plot(plots["beeswarm_plot"])
-                plt.close(plots["beeswarm_plot"])
+            for class_label, fig in plots["beeswarm_plots"].items():
+                if fig:
+                    plots_persister.persist_beeswarm_plot(fig, class_label)
+                    plt.close(fig)
 
             if plots["coefficients_plot"]:
                 plots_persister.persist_coef_plot(plots["coefficients_plot"])
                 plt.close(plots["coefficients_plot"])
 
-            if plots["cluster_importances_plot"]:
-                plots_persister.persist_cluster_importance_plot(
-                    plots["cluster_importances_plot"]
-                )
-                plt.close(plots["cluster_importances_plot"])
+            for class_label, fig in plots["cluster_importances_plots"].items():
+                if fig:
+                    plots_persister.persist_cluster_importance_plot(fig, class_label)
+                    plt.close(fig)
 
             if plots.get("rmse_boxplot"):
                 plots_persister.persist_rmse_boxplot(plots["rmse_boxplot"])

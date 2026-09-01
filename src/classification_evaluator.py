@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Any
 import numpy as np
 from pandas import DataFrame, Series
 from sklearn.metrics import log_loss
@@ -33,6 +33,7 @@ class ClassificationEvaluator:
 
     def evaluate(self, X: DataFrame, y: Series) -> dict:
         target_col = str(y.name)
+        classes = np.unique(y)
 
         results_data_manager = ResultsDataManager(self.model_name)
         plot_manager = ResultsPlotManager(self.model_name, target_col=target_col)
@@ -43,7 +44,7 @@ class ClassificationEvaluator:
 
         cv = self.cv
         splits = cv.split(X, y, groups=self.groups)
-        waterfall_plots = {}
+        waterfall_plots: dict[Any, dict[Any, Any]] = {}
 
         for i, (train_index, test_index) in enumerate(splits):
             if self.on_split_begin:
@@ -80,7 +81,6 @@ class ClassificationEvaluator:
             y_true = y_test.iloc[0]
             predictions = pipeline.predict(X_test)
             predictions_proba = pipeline.predict_proba(X_test)
-            classes = np.unique(y)
             log_loss_score = log_loss(y_test, predictions_proba, labels=classes)
             best_params_dict = study.best_params
 
@@ -97,50 +97,66 @@ class ClassificationEvaluator:
             )
             results_data_manager.record_split_coefs(pipeline, test_sample)
 
-            explanation = results_data_manager.compute_and_record_shap(
+            per_class_explanations = results_data_manager.compute_and_record_shap(
                 pipeline=pipeline,
                 X_train=X_train,
                 X_test=X_test,
                 cluster_selector=cluster_selector,
             )
 
-            waterfall_plot = plot_manager.generate_shap_waterfall(
-                explanation, test_sample
-            )
-            waterfall_plots[test_sample] = waterfall_plot
+            for class_label, explanation in per_class_explanations.items():
+                class_name = str(class_label)
+                waterfall_fig = plot_manager.generate_shap_waterfall(
+                    explanation, test_sample, class_name
+                )
+                waterfall_plots.setdefault(class_label, {})[test_sample] = waterfall_fig
 
         classification_report = results_data_manager.create_classification_report()
-        feature_importances = results_data_manager.get_feature_importances()
+        feature_importances_by_class = results_data_manager.get_feature_importances()
 
-        beeswarm_plot = plot_manager.generate_bee_swarm_plot(
-            results_data_manager.all_shap_explanations
+        beeswarm_plots: dict[Any, Any] = {}
+        cluster_importances_plots: dict[Any, Any] = {}
+        top_features_by_class: dict[Any, Any] = {}
+
+        for class_label, explanations in (
+            results_data_manager.shap_explanations_by_class.items()
+        ):
+            class_name = str(class_label)
+            beeswarm_plots[class_label] = plot_manager.generate_bee_swarm_plot(
+                explanations, class_name
+            )
+
+            top_features = TopFeaturesPicker(cluster_selector.clusters).pick_top_features(
+                feature_importances_by_class[class_label]
+            )
+            top_features_by_class[class_label] = top_features
+            cluster_importances_plots[class_label] = (
+                plot_manager.generate_cluster_importance_plot(
+                    top_features,
+                    class_name=class_name,
+                    clusters=cluster_selector.clusters,
+                )
+            )
+        confusion_matrix = plot_manager.generate_confusion_matrix(
+            results_data_manager.rows_result
         )
         coefficients_plot = plot_manager.generate_coef_plot(
             results_data_manager.coeff_results, n_samples=15
-        )
-        top_features = TopFeaturesPicker(cluster_selector.clusters).pick_top_features(
-            feature_importances
-        )
-        cluster_importances_plot = plot_manager.generate_cluster_importance_plot(
-            top_features, clusters=cluster_selector.clusters
-        )
-        confusion_matrix = plot_manager.generate_confusion_matrix(
-            results_data_manager.rows_result
         )
 
         results_payload = {
             "plots": {
                 "waterfall_plots": waterfall_plots,
-                "beeswarm_plot": beeswarm_plot,
+                "beeswarm_plots": beeswarm_plots,
                 "coefficients_plot": coefficients_plot,
-                "cluster_importances_plot": cluster_importances_plot,
+                "cluster_importances_plots": cluster_importances_plots,
                 "confusion_matrix": confusion_matrix,
             },
             "data_manager": results_data_manager,
             "classification_report": classification_report,
             "cluster_selector": cluster_selector,
-            "feature_importances": feature_importances,
-            "top_features": top_features,
+            "feature_importances": feature_importances_by_class,
+            "top_features": top_features_by_class,
         }
 
         return results_payload
