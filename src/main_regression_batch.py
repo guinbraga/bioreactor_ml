@@ -120,7 +120,7 @@ for model in selected_models:
 # ====== Discover feature subsets ====== #
 
 BASE_FEATURE_DIR = Path("results/38_cluster_importances")
-BATCH_RESULTS_DIR = "results/batch_regression"
+BATCH_RESULTS_DIR = "results/40_batch_regression"
 
 feature_subsets: list[dict[str, str]] = []
 for experiment_dir in sorted(BASE_FEATURE_DIR.iterdir()):
@@ -150,9 +150,7 @@ for subset in feature_subsets:
 
 # ====== Run batch evaluation ====== #
 
-status_spinner = console.status(
-    "[bold green]Initializing experiment...[/bold green]"
-)
+status_spinner = console.status("[bold green]Initializing experiment...[/bold green]")
 
 
 def on_model_begin(model_name: str) -> None:
@@ -166,8 +164,7 @@ def on_split_begin(i: int, n_splits: int) -> None:
 def on_persist(model_name: str) -> None:
     status_spinner.start()
     status_spinner.update(
-        f"[bold cyan]Saving results and rendering plots for {model_name}..."
-        f"[/bold cyan]"
+        f"[bold cyan]Saving results and rendering plots for {model_name}...[/bold cyan]"
     )
 
 
@@ -213,8 +210,7 @@ for target_column in target_columns:
             target_column=target_column,
             selected_models=models_to_evaluate,
             results_dir=(
-                f"{BATCH_RESULTS_DIR}/"
-                f"{subset['experiment']}/{subset['model']}"
+                f"{BATCH_RESULTS_DIR}/{subset['experiment']}/{subset['model']}"
             ),
             selected_features_csv=subset["csv_path"],
             on_model_begin=on_model_begin,
