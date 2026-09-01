@@ -154,6 +154,7 @@ def compile_all_results():
 
             # Compute metrics
             rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+            rrmse = rmse / np.mean(y_true)
             mae = mean_absolute_error(y_true, y_pred)
             r2 = r2_score(y_true, y_pred)
 
@@ -174,6 +175,7 @@ def compile_all_results():
                     "path": str(csv_path),
                     "n_samples": len(df),
                     "rmse": rmse,
+                    "rrmse": rrmse,
                     "mae": mae,
                     "r2": r2,
                     "pearson_r": pearson_val,
@@ -336,8 +338,8 @@ if page == "📊 Target Performance Comparison":
             st.markdown(
                 f"""
             <div class="metric-card">
-                <div class="metric-title">📉 Best (Lowest) RMSE</div>
-                <div class="metric-value">{best_rmse_row["rmse"]:.4f}</div>
+                <div class="metric-title">📉 Lowest RMSE (RRMSE)</div>
+                <div class="metric-value">{best_rmse_row["rmse"]:.4f} ({best_rmse_row["rrmse"]:.2f}%)</div>
                 <div class="metric-subtitle"><b>Model:</b> {best_rmse_row["regressor"]}</div>
                 <div class="metric-subtitle"><b>Features:</b> {best_rmse_row["feature_condition"]}</div>
             </div>
