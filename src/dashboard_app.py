@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 # Base directories
-BASE_DIR = Path("results/batch_regression")
+BASE_DIR = Path("results/40_batch_regression")
 COMPILED_CSV_PATH = Path("results/compiled_regression_metrics.csv")
 
 # Custom CSS for premium aesthetics
@@ -339,7 +339,7 @@ if page == "📊 Target Performance Comparison":
                 f"""
             <div class="metric-card">
                 <div class="metric-title">📉 Lowest RMSE (RRMSE)</div>
-                <div class="metric-value">{best_rmse_row["rmse"]:.4f} ({best_rmse_row["rrmse"]:.2f}%)</div>
+                <div class="metric-value">{best_rmse_row["rmse"]:.4f} ({best_rmse_row["rrmse"] * 100:.2f}%)</div>
                 <div class="metric-subtitle"><b>Model:</b> {best_rmse_row["regressor"]}</div>
                 <div class="metric-subtitle"><b>Features:</b> {best_rmse_row["feature_condition"]}</div>
             </div>
@@ -447,6 +447,7 @@ if page == "📊 Target Performance Comparison":
             "regressor",
             "r2",
             "rmse",
+            "rrmse",
             "mae",
             "pearson_r",
             "spearman_rho",
