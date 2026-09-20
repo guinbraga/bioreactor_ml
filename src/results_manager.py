@@ -36,7 +36,9 @@ class ResultsDataManager:
         self.coeff_results: list[dict] = []
         self.all_shap_explanations: list[Explanation] = []
         self.shap_classes: list[Any] = []
-        self.shap_explanations_by_class: dict[Any, list[Explanation]] = defaultdict(list)
+        self.shap_explanations_by_class: dict[Any, list[Explanation]] = defaultdict(
+            list
+        )
 
     def record_split_metrics(self, split_data: dict) -> None:
         self.rows_result.append(split_data)
@@ -61,6 +63,7 @@ class ResultsDataManager:
         X_train: DataFrame,
         X_test: DataFrame,
         cluster_selector: CorrelationClusterSelector,
+        cluster_features: bool,
     ) -> dict[Any, Explanation]:
         """Computes the Owen explanation for every output class of the fitted
         pipeline, stores them in memory (per-class and flat), and returns a
@@ -79,14 +82,16 @@ class ResultsDataManager:
             else pipeline.predict
         )
 
-        partition_tree = cluster_selector.partition_tree_
+        if cluster_features:
+            partition_tree = cluster_selector.partition_tree_
+            partition_mask = shap.maskers.Partition(X_train, clustering=partition_tree)
+            explainer = shap.PartitionExplainer(
+                predict_function, partition_mask, partition_tree=partition_tree
+            )
+        else:
+            explainer = shap.Explainer(predict_function, X_train)
 
-        partition_mask = shap.maskers.Partition(X_train, clustering=partition_tree)
-        explainer = shap.PartitionExplainer(
-            predict_function, partition_mask, partition_tree=partition_tree
-        )
-
-        shap_values = explainer(X_test)
+        shap_values = explainer(X_test, max_evals=2000)
 
         if hasattr(model, "classes_"):
             class_labels = list(model.classes_)
@@ -95,6 +100,8 @@ class ResultsDataManager:
 
         per_class_explanations: dict[Any, Explanation] = {}
 
+        # -- Shap values can come in 3 shapes depending on the Explainer object,
+        # -- this catches all.
         if isinstance(shap_values, list):
             n_outputs = min(len(shap_values), len(class_labels))
             for k in range(n_outputs):
@@ -189,7 +196,7 @@ class ResultsPlotManager:
         df_values = pd.DataFrame(explanation_values)
         df_values.fillna(0, inplace=True)
         df_data = pd.DataFrame(explanation_data)
-        df_data = df_data[df_values.columns] # make sure both dfs are aligned
+        df_data = df_data[df_values.columns]  # make sure both dfs are aligned
         feature_names = df_values.columns.to_list()
 
         global_explanation = Explanation(

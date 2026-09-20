@@ -56,6 +56,7 @@ def evaluate_experiment(
     data_manager: DataManager,
     target_column: str,
     selected_models: dict[str, ModelConfig],
+    cluster_features: bool,
     results_dir: str,
     on_complete: Callable | None = None,
     on_model_begin: Callable | None = None,
@@ -76,6 +77,7 @@ def evaluate_experiment(
             model_name=model_name,
             selected_scaler_sequences=model_config["selected_scaler_sequences"],
             selected_selectors=model_config["selected_selectors"],
+            cluster_features=cluster_features,
             cv=cv_obj,
             groups=groups,
             on_split_begin=on_split_begin,
@@ -98,11 +100,15 @@ def evaluate_experiment(
             data_persister.save_shap_dataframes()
             data_persister.save_shap_objects()
             data_persister.save_classification_report()
+
+            cluster_selector = (
+                results_payload.get("cluster_selector") if cluster_features else None
+            )
             for class_label, top_features in results_payload["top_features"].items():
                 data_persister.save_top_feat_importances(
                     top_features,
                     class_label,
-                    results_payload.get("cluster_selector"),
+                    cluster_selector,
                 )
             data_persister.save_experiment_setup(
                 selected_scaler_sequences=model_config["selected_scaler_sequences"],
@@ -175,7 +181,7 @@ def evaluate_experiment_regression(
             groups=groups,
             on_split_begin=on_split_begin,
         )
-        results_payload = evaluator.evaluate(X, y)
+        results_payload = evaluator.evaluate(X, y)  # type: ignore
 
         if persist_to_disk:
             if on_persist:

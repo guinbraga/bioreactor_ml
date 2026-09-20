@@ -16,6 +16,7 @@ class ClassificationEvaluator:
         model_name: str,
         selected_scaler_sequences: list[tuple[str, ...]],
         selected_selectors: list[str],
+        cluster_features: bool,
         cv: BaseCrossValidator = LeaveOneOut(),
         groups: Series | None = None,
         on_split_begin: Callable | None = None,
@@ -24,6 +25,7 @@ class ClassificationEvaluator:
         self.cv = cv
         self.selected_scaler_sequences = selected_scaler_sequences
         self.selected_selectors = selected_selectors
+        self.cluster_features = cluster_features
         self.groups = groups
         self.on_split_begin = on_split_begin
         self.cv_registry: dict[str, BaseCrossValidator] = {
@@ -102,6 +104,7 @@ class ClassificationEvaluator:
                 X_train=X_train,
                 X_test=X_test,
                 cluster_selector=cluster_selector,
+                cluster_features=self.cluster_features,
             )
 
             for class_label, explanation in per_class_explanations.items():
@@ -118,23 +121,26 @@ class ClassificationEvaluator:
         cluster_importances_plots: dict[Any, Any] = {}
         top_features_by_class: dict[Any, Any] = {}
 
-        for class_label, explanations in (
-            results_data_manager.shap_explanations_by_class.items()
-        ):
+        for (
+            class_label,
+            explanations,
+        ) in results_data_manager.shap_explanations_by_class.items():
             class_name = str(class_label)
             beeswarm_plots[class_label] = plot_manager.generate_bee_swarm_plot(
                 explanations, class_name
             )
 
-            top_features = TopFeaturesPicker(cluster_selector.clusters).pick_top_features(
-                feature_importances_by_class[class_label]
-            )
+            top_features = TopFeaturesPicker(
+                cluster_selector.clusters, self.cluster_features
+            ).pick_top_features(feature_importances_by_class[class_label])
             top_features_by_class[class_label] = top_features
+
+            plot_clusters = cluster_selector.clusters if self.cluster_features else None
             cluster_importances_plots[class_label] = (
-                plot_manager.generate_cluster_importance_plot(
+                plot_manager.generate_cluster_importance_plot(  # TODO: adapt to handle not clustering as well
                     top_features,
                     class_name=class_name,
-                    clusters=cluster_selector.clusters,
+                    clusters=plot_clusters
                 )
             )
         confusion_matrix = plot_manager.generate_confusion_matrix(

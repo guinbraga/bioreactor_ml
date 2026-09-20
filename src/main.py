@@ -101,6 +101,7 @@ for model in selected_models:
         "groups": groups,
     }
 
+cluster_features = questionary.confirm("Cluster OTUs by correlation?").ask()
 
 results_dir = questionary.path("Which directory to save results?").ask()
 
@@ -126,11 +127,13 @@ def on_complete(model_name: str):
     status_spinner.stop()
     console.print(f"[green]Finished Evaluation for {model_name}![/green]")
 
+
 for target_column in target_columns:
     evaluate_experiment(
         data_manager=data_manager,
         target_column=target_column,
         selected_models=models_to_evaluate,
+        cluster_features=cluster_features,
         results_dir=results_dir,
         on_model_begin=on_model_begin,
         on_split_begin=on_split_begin,
