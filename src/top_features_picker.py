@@ -3,7 +3,7 @@ from pandas import DataFrame, Series
 
 
 class TopFeaturesPicker:
-    def __init__(self, clusters: dict | Series, cluster_features: bool) -> None:
+    def __init__(self, clusters: dict | Series, cluster_features: bool = True) -> None:
         self.clusters = clusters
         self.cluster_features = cluster_features
 

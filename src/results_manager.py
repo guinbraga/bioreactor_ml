@@ -63,7 +63,7 @@ class ResultsDataManager:
         X_train: DataFrame,
         X_test: DataFrame,
         cluster_selector: CorrelationClusterSelector,
-        cluster_features: bool,
+        cluster_features: bool = True,
     ) -> dict[Any, Explanation]:
         """Computes the Owen explanation for every output class of the fitted
         pipeline, stores them in memory (per-class and flat), and returns a
