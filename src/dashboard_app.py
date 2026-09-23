@@ -610,7 +610,7 @@ elif page == "🔬 Detailed Model Explorer":
                 with col_b:
                     beeswarm_path = (
                         run_dir
-                        / "plots"
+                        / "plots_taxonomy"
                         / f"{run_row['regressor']}_beeswarm_regression.png"
                     )
                     if beeswarm_path.exists():
@@ -625,7 +625,7 @@ elif page == "🔬 Detailed Model Explorer":
                 with col_ci:
                     ci_path = (
                         run_dir
-                        / "plots"
+                        / "plots_taxonomy"
                         / f"{run_row['regressor']}_cluster_importance_Owen_regression.png"
                     )
                     if ci_path.exists():
@@ -660,7 +660,7 @@ elif page == "🔬 Detailed Model Explorer":
                 # Check waterfall plot
                 waterfall_path = (
                     run_dir
-                    / "plots"
+                    / "plots_taxonomy"
                     / f"{run_row['regressor']}_waterfall_{sample_id}_regression.png"
                 )
                 if waterfall_path.exists():
