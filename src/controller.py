@@ -157,7 +157,12 @@ def evaluate_experiment_regression(
     on_split_begin: Callable | None = None,
     on_persist: Callable | None = None,
     persist_to_disk: bool = True,
+    output_profile: str = "full",
 ):
+    valid_profiles = {"full", "slim"}
+    if output_profile not in valid_profiles:
+        raise ValueError(f"Unknown output_profile: {output_profile!r}")
+
     X, y = data_manager.get_X_y(target_column)
     pipeline_factory = PipelineFactory()
 
@@ -217,9 +222,10 @@ def evaluate_experiment_regression(
             for class_label, sample_figs in plots["waterfall_plots"].items():
                 for sample_id, fig in sample_figs.items():
                     if fig:
-                        plots_persister.persist_shap_waterfall(
-                            fig, sample_id, class_label
-                        )
+                        if output_profile == "full":
+                            plots_persister.persist_shap_waterfall(
+                                fig, sample_id, class_label
+                            )
                         plt.close(fig)
 
             for class_label, fig in plots["beeswarm_plots"].items():

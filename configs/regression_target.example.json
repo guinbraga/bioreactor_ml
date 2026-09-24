@@ -1,0 +1,48 @@
+{
+  "_comment": "Example experiment definition for src/main_regression_target.py. 'target_columns' is the FULL set of targets excluded from the feature matrix (mirrors main_regression_batch.py); '--target' selects which of them to run in this invocation. The models block below reproduces the setup already present under results/40_batch_regression.",
+  "target_columns": [
+    "Acetate (mg L-1)",
+    "Acetic acid (mg L-1)",
+    "Butyric acid (mg L-1)",
+    "CH4 (%)",
+    "CO2 (%)",
+    "Ethanol (mg L-1)",
+    "H2 (%)",
+    "iso-Butyrate (mg L-1)",
+    "iso-Valerate (mg L-1)",
+    "Lactate (mg L-1)",
+    "N2 (%)",
+    "n-Butyrate (mg L-1)",
+    "n-Valerate (mg L-1)",
+    "O2 (%)",
+    "OLR (gVS.L.d)",
+    "pH",
+    "Propionate (mg L-1)",
+    "Propionic acid (mg L-1)",
+    "Specific biogas production (mLNorm gVS-1)_corrected",
+    "Specific CH4 production (mLNorm gVS-1)_corrected",
+    "Total VFAs production (mg L-1)",
+    "Total volatile fatty acids (mg L-1)",
+    "Total volatile solids degradation (%)",
+    "Volatile solids fed (g-1VS d-1)",
+    "Volatile solids fed (gVS d-1)"
+  ],
+  "models": {
+    "Elastic Net Regressor": {
+      "selected_scaler_sequences": [
+        ["CLR Transformer", "Standard Scaler"]
+      ],
+      "selected_selectors": ["No Feature Selection"],
+      "cv": "Leave One Out",
+      "groups": null
+    },
+    "Random Forest Regressor": {
+      "selected_scaler_sequences": [
+        ["CLR Transformer"]
+      ],
+      "selected_selectors": ["Elastic Net Selector"],
+      "cv": "Leave One Out",
+      "groups": null
+    }
+  }
+}
