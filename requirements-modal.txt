@@ -1,0 +1,14 @@
+# Curated, pinned dependencies for the Modal regression fan-out image.
+# Only the packages imported by the CPU-only regression path
+# (src/main_regression_target.py + its pipeline modules) are listed here.
+# This is intentionally NOT the full conda freeze in requirements.txt.
+numpy==2.4.3
+pandas==3.0.2
+scipy==1.17.0
+scikit-learn==1.8.0
+scikit-bio==0.7.2
+optuna==4.8.0
+shap==0.50.0
+matplotlib==3.10.8
+pyarrow==23.0.1
+joblib==1.5.3

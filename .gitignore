@@ -6,3 +6,5 @@ test*
 text/
 src/frontend.py
 .omo*
+.ignore
+.gitignore
