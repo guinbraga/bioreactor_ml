@@ -20,6 +20,13 @@ st.set_page_config(
 BASE_DIR = Path("results/40_batch_regression")
 COMPILED_CSV_PATH = Path("results/compiled_regression_metrics.csv")
 
+# Counterpart run: individual features selected, cluster partitions ignored for SHAP.
+NO_CORR_DIR = Path("results/cloud_run/44_reg_no_corr")
+NO_CORR_CSV_PATH = Path("results/compiled_regression_metrics_no_corr.csv")
+
+CORR_LABEL = "Cluster / Correlation"
+NO_CORR_LABEL = "No Correlation"
+
 # Custom CSS for premium aesthetics
 st.markdown(
     """
@@ -119,15 +126,15 @@ st.markdown(
 
 
 # Function to compile metrics dynamically
-def compile_all_results():
-    if not BASE_DIR.exists():
+def compile_all_results(base_dir=BASE_DIR, out_csv=COMPILED_CSV_PATH):
+    if not base_dir.exists():
         return pd.DataFrame()
 
     all_runs = []
-    csv_files = list(BASE_DIR.glob("**/*_predictions_summary.csv"))
+    csv_files = list(base_dir.glob("**/*_predictions_summary.csv"))
 
     for csv_path in csv_files:
-        rel_path = csv_path.relative_to(BASE_DIR)
+        rel_path = csv_path.relative_to(base_dir)
         parts = rel_path.parts
 
         # Structure parsing:
@@ -189,7 +196,7 @@ def compile_all_results():
     df_results = pd.DataFrame(all_runs)
     if not df_results.empty:
         # Save to cache
-        df_results.to_csv(COMPILED_CSV_PATH, index=False)
+        df_results.to_csv(out_csv, index=False)
     return df_results
 
 
@@ -197,10 +204,41 @@ def compile_all_results():
 @st.cache_data
 def load_metrics(force_refresh=False):
     if force_refresh or not COMPILED_CSV_PATH.exists():
-        df = compile_all_results()
+        df = compile_all_results(BASE_DIR, COMPILED_CSV_PATH)
     else:
         df = pd.read_csv(COMPILED_CSV_PATH)
     return df
+
+
+@st.cache_data
+def load_no_corr_metrics(force_refresh=False):
+    if force_refresh or not NO_CORR_CSV_PATH.exists():
+        df = compile_all_results(NO_CORR_DIR, NO_CORR_CSV_PATH)
+    else:
+        df = pd.read_csv(NO_CORR_CSV_PATH)
+    return df
+
+
+@st.cache_data
+def load_comparison(force_refresh=False):
+    keys = ["experiment", "feature_selector", "target", "regressor"]
+    left = load_metrics(force_refresh=force_refresh)
+    right = load_no_corr_metrics(force_refresh=force_refresh)
+    if left.empty or right.empty:
+        return pd.DataFrame()
+
+    merged = left.merge(right, on=keys, how="inner", suffixes=("_corr", "_nocorr"))
+    merged["delta_r2"] = merged["r2_nocorr"] - merged["r2_corr"]
+    merged["delta_rrmse"] = merged["rrmse_nocorr"] - merged["rrmse_corr"]
+    merged["feature_condition"] = merged.apply(
+        lambda r: (
+            "All Features"
+            if r["experiment"] == "all_features"
+            else f"{r['experiment']} / {r['feature_selector']}"
+        ),
+        axis=1,
+    )
+    return merged
 
 
 # Main title block
@@ -235,6 +273,7 @@ page = st.sidebar.radio(
         "📊 Target Performance Comparison",
         "🔬 Detailed Model Explorer",
         "📈 Cross-Target Matrix",
+        "🆚 Cluster vs No-Correlation",
     ],
 )
 
@@ -242,6 +281,7 @@ page = st.sidebar.radio(
 if st.sidebar.button("🔄 Refresh Data Cache"):
     with st.spinner("Re-compiling all metrics..."):
         df_metrics = load_metrics(force_refresh=True)
+        load_no_corr_metrics(force_refresh=True)
         st.cache_data.clear()
         st.success("Data recompiled and cache cleared!")
         st.rerun()
@@ -727,4 +767,233 @@ elif page == "📈 Cross-Target Matrix":
     st.markdown("#### Performance Grid Table")
     st.dataframe(
         pivot_ct.style.background_gradient(cmap="coolwarm"), use_container_width=True
+    )
+
+
+# ---------------- PAGE 4: Cluster vs No-Correlation ----------------
+elif page == "🆚 Cluster vs No-Correlation":
+    st.markdown(
+        "<h2 class='section-header'>🆚 Cluster/Correlation vs No-Correlation Feature Selection</h2>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"**{CORR_LABEL}** groups features into correlation clusters and selects "
+        f"clusters/interpret SHAP at cluster level. **{NO_CORR_LABEL}** selects "
+        "individual features and ignores the cluster partitions for SHAP. \n\n"
+        f"Δ = {NO_CORR_LABEL} − {CORR_LABEL}: positive ΔR² favours no-correlation; "
+        "negative ΔRRMSE favours no-correlation."
+    )
+
+    try:
+        df_cmp = load_comparison()
+    except Exception as e:
+        st.error(f"Error loading comparison data: {e}")
+        df_cmp = pd.DataFrame()
+
+    if df_cmp.empty:
+        st.warning(
+            "No matching runs found between the correlation run "
+            f"(`{BASE_DIR}`) and the no-correlation run (`{NO_CORR_DIR}`)."
+        )
+        st.stop()
+
+    metric_labels = {"r2": "R²", "rmse": "RMSE", "rrmse": "RRMSE"}
+    metric_delta_labels = {
+        "r2": "ΔR² (No-Corr − Corr)",
+        "rrmse": "ΔRRMSE (No-Corr − Corr)",
+    }
+    lower_is_better = {"rrmse"}
+
+    exp_opts = sorted(df_cmp["experiment"].unique())
+    sel_opts = sorted(df_cmp["feature_selector"].unique())
+    reg_opts = sorted(df_cmp["regressor"].unique())
+    tgt_opts = sorted(df_cmp["target"].unique())
+
+    f1, f2, f3, f4 = st.columns(4)
+    exp_pick = f1.multiselect("Experiment", exp_opts, default=exp_opts)
+    sel_pick = f2.multiselect("Feature Selector", sel_opts, default=sel_opts)
+    reg_pick = f3.multiselect("Regressor", reg_opts, default=reg_opts)
+    tgt_pick = f4.multiselect("Target", tgt_opts, default=tgt_opts)
+
+    df_view = df_cmp[
+        df_cmp["experiment"].isin(exp_pick)
+        & df_cmp["feature_selector"].isin(sel_pick)
+        & df_cmp["regressor"].isin(reg_pick)
+        & df_cmp["target"].isin(tgt_pick)
+    ].copy()
+
+    if df_view.empty:
+        st.info("No runs match the current filters.")
+        st.stop()
+
+    mean_dr2 = df_view["delta_r2"].mean()
+    mean_drrmse = df_view["delta_rrmse"].mean()
+    n_better_r2 = int((df_view["delta_r2"] > 0).sum())
+    n_better_rrmse = int((df_view["delta_rrmse"] < 0).sum())
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.markdown(
+        f"""
+    <div class="metric-card">
+        <div class="metric-title">Mean ΔR²</div>
+        <div class="metric-value">{mean_dr2:+.4f}</div>
+        <div class="metric-subtitle">{NO_CORR_LABEL} vs {CORR_LABEL}</div>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+    c2.markdown(
+        f"""
+    <div class="metric-card">
+        <div class="metric-title">Mean ΔRRMSE</div>
+        <div class="metric-value">{mean_drrmse * 100:+.2f}%</div>
+        <div class="metric-subtitle">{NO_CORR_LABEL} vs {CORR_LABEL}</div>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+    c3.markdown(
+        f"""
+    <div class="metric-card">
+        <div class="metric-title">Runs Better on R²</div>
+        <div class="metric-value">{n_better_r2} / {len(df_view)}</div>
+        <div class="metric-subtitle">{NO_CORR_LABEL} improved</div>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+    c4.markdown(
+        f"""
+    <div class="metric-card">
+        <div class="metric-title">Runs Better on RRMSE</div>
+        <div class="metric-value">{n_better_rrmse} / {len(df_view)}</div>
+        <div class="metric-subtitle">{NO_CORR_LABEL} improved</div>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    cmp_metric = st.radio(
+        "Choose performance metric to compare:",
+        ["r2", "rrmse"],
+        format_func=lambda m: metric_labels[m],
+        horizontal=True,
+        key="cmp_metric",
+    )
+    xcol = f"{cmp_metric}_corr"
+    ycol = f"{cmp_metric}_nocorr"
+    delta_col = f"delta_{cmp_metric}"
+
+    st.markdown(
+        "<h4 style='color: #1e3c72; font-weight:600; margin-top:1.5rem;'>Per-Run Agreement</h4>",
+        unsafe_allow_html=True,
+    )
+    fig_cmp = px.scatter(
+        df_view,
+        x=xcol,
+        y=ycol,
+        color="target",
+        hover_data=["experiment", "feature_selector", "regressor"],
+        labels={
+            xcol: f"{metric_labels[cmp_metric]} — {CORR_LABEL}",
+            ycol: f"{metric_labels[cmp_metric]} — {NO_CORR_LABEL}",
+        },
+        title=f"{metric_labels[cmp_metric]}: {CORR_LABEL} vs {NO_CORR_LABEL} (each point = one run)",
+    )
+    lo = float(np.nanmin([df_view[xcol].min(), df_view[ycol].min()]))
+    hi = float(np.nanmax([df_view[xcol].max(), df_view[ycol].max()]))
+    fig_cmp.add_shape(
+        type="line",
+        x0=lo,
+        y0=lo,
+        x1=hi,
+        y1=hi,
+        line=dict(color="Red", dash="dash"),
+        name="Equal performance",
+    )
+    fig_cmp.update_layout(height=550)
+    st.plotly_chart(fig_cmp, use_container_width=True)
+
+    st.markdown(
+        "<h4 style='color: #1e3c72; font-weight:600; margin-top:1.5rem;'>Mean Metric per Target</h4>",
+        unsafe_allow_html=True,
+    )
+    df_tgt_mean = df_view.groupby("target")[[xcol, ycol]].mean().reset_index()
+    df_long = df_tgt_mean.melt(
+        id_vars="target", value_vars=[xcol, ycol], var_name="regime", value_name="value"
+    )
+    df_long["regime"] = df_long["regime"].map({xcol: CORR_LABEL, ycol: NO_CORR_LABEL})
+    target_order = df_tgt_mean.sort_values(
+        xcol, ascending=(cmp_metric in lower_is_better)
+    )["target"]
+    fig_bar = px.bar(
+        df_long,
+        x="target",
+        y="value",
+        color="regime",
+        barmode="group",
+        category_orders={
+            "target": list(target_order),
+            "regime": [CORR_LABEL, NO_CORR_LABEL],
+        },
+        labels={
+            "value": metric_labels[cmp_metric],
+            "target": "Target Parameter",
+            "regime": "Feature Regime",
+        },
+        title=f"Mean {metric_labels[cmp_metric]} per Target ({CORR_LABEL} vs {NO_CORR_LABEL})",
+        color_discrete_sequence=px.colors.qualitative.Set2,
+    )
+    fig_bar.update_layout(height=520, xaxis_tickangle=-45)
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+    st.markdown(
+        f"<h4 style='color: #1e3c72; font-weight:600; margin-top:1.5rem;'>{metric_delta_labels[cmp_metric]} Heatmap</h4>",
+        unsafe_allow_html=True,
+    )
+    pivot_delta = df_view.pivot_table(
+        index="feature_condition",
+        columns="target",
+        values=delta_col,
+        aggfunc="mean",
+    )
+    fig_delta = px.imshow(
+        pivot_delta,
+        labels=dict(
+            x="Target Parameter",
+            y="Feature Selection Source",
+            color=metric_delta_labels[cmp_metric],
+        ),
+        color_continuous_scale="RdBu",
+        color_continuous_midpoint=0,
+        aspect="auto",
+    )
+    fig_delta.update_layout(
+        height=600,
+        margin=dict(l=180, r=20, t=40, b=100),
+    )
+    st.plotly_chart(fig_delta, use_container_width=True)
+
+    st.markdown(
+        "<h4 style='color: #1e3c72; font-weight:600; margin-top:1.5rem;'>Detailed Comparison Table</h4>",
+        unsafe_allow_html=True,
+    )
+    display_cols = [
+        "experiment",
+        "feature_selector",
+        "target",
+        "regressor",
+        "r2_corr",
+        "r2_nocorr",
+        "delta_r2",
+        "rrmse_corr",
+        "rrmse_nocorr",
+        "delta_rrmse",
+    ]
+    df_display_cmp = df_view[display_cols].sort_values("delta_r2", ascending=False)
+    st.dataframe(
+        df_display_cmp.style.background_gradient(
+            subset=["delta_r2"], cmap="RdYlGn"
+        ).background_gradient(subset=["delta_rrmse"], cmap="RdYlGn_r"),
+        use_container_width=True,
     )
