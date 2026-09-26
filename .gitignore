@@ -1,4 +1,3 @@
-results/*
 data/*
 src/__pycache__
 *.pyc
@@ -7,4 +6,7 @@ text/
 src/frontend.py
 .omo*
 .ignore
+results/**
+!results/**/
+!results/**/*.py
 .gitignore
